@@ -1,0 +1,18 @@
+{
+  "name": "A-NARDS — Нарды онлайн",
+  "short_name": "A-NARDS",
+  "description": "Играйте в нарды онлайн: короткие и длинные. Партии с ботом и с соперником по сети.",
+  "lang": "ru",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#3b2a1a",
+  "theme_color": "#3b2a1a",
+  "icons": [
+    { "src": "/icon-192.png", "type": "image/png", "sizes": "192x192", "purpose": "any" },
+    { "src": "/icon-512.png", "type": "image/png", "sizes": "512x512", "purpose": "any" },
+    { "src": "/icon-192.png", "type": "image/png", "sizes": "192x192", "purpose": "maskable" },
+    { "src": "/icon-512.png", "type": "image/png", "sizes": "512x512", "purpose": "maskable" }
+  ]
+}
