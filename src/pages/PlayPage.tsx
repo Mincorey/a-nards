@@ -33,8 +33,6 @@ export default function PlayPage() {
   // Пока открыта модалка настроек — партия «за кадром» на паузе (не тикает).
   useOverlay(session.setupOpen);
 
-  const diffLabel = DIFFS.find((d) => d.key === session.difficulty)?.label ?? '';
-
   function openSetup() {
     setTv(session.variant);
     setTd(session.difficulty);
@@ -57,7 +55,7 @@ export default function PlayPage() {
       {/* Доска подгружается только когда партия реально идёт (модалка настроек
           закрыта). До «Начать игру» показываем ТОЛЬКО модальное окно настроек,
           без доски на фоне — сама партия «за кадром» в контексте не видна. */}
-      {!session.setupOpen && <BotGame difficultyLabel={diffLabel} onNewGame={openSetup} />}
+      {!session.setupOpen && <BotGame onNewGame={openSetup} />}
 
       {session.setupOpen && (
         <Modal className="setup" onClose={closeSetupModal}>

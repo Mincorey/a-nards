@@ -108,7 +108,10 @@ export function useGame(
     render();
     if (allowedMoves(gameRef.current).length === 0) {
       setMessage('Нет доступных ходов — пас');
-      setTimeout(() => { if (mounted.current) endHuman(); }, 900);
+      // Замедлено (было 900 мс): при пасе — особенно когда шашка на баре и
+      // бросок не даёт входа — игрок должен успеть разглядеть, что выпало на
+      // костях, прежде чем кубики исчезнут вместе с передачей хода.
+      setTimeout(() => { if (mounted.current) endHuman(); }, 2400);
     } else {
       setPhase('humanMove');
       setMessage('Выберите шашку и ход');

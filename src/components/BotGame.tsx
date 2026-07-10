@@ -15,13 +15,12 @@ import { useAuth } from '../lib/auth';
 import { useBotGameSession } from '../game/BotGameSession';
 
 interface Props {
-  difficultyLabel: string;
   onNewGame: () => void;
 }
 
-export default function BotGame({ difficultyLabel, onNewGame }: Props) {
+export default function BotGame({ onNewGame }: Props) {
   const auth = useAuth();
-  const { variant, game: g, paused } = useBotGameSession();
+  const { game: g, paused } = useBotGameSession();
   const targetSet = useMemo(() => new Set(g.targets.map((m) => m.to)), [g.targets]);
   const [overDismissed, setOverDismissed] = useState(false);
 
@@ -40,11 +39,6 @@ export default function BotGame({ difficultyLabel, onNewGame }: Props) {
 
   return (
     <>
-      <div className="game-info">
-        <span>{variant === 'short' ? 'Короткие нарды' : 'Длинные нарды'} · бот: {difficultyLabel}</span>
-        <button type="button" className="game-info__edit" onClick={onNewGame}>изменить</button>
-      </div>
-
       <div className={'game__table' + (paused ? ' is-paused' : '')}>
         <PlayerPanel
           className="game__p" name="Бот" color="b"

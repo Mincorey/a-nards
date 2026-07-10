@@ -81,9 +81,9 @@ interface Drag { from: number | 'bar'; color: Color; x: number; y: number; }
  * предыдущего и нового состояния: если ровно один слот потерял ровно одну
  * фишку, а другой (того же цвета) ровно одну получил — это обычный ход, и мы
  * рисуем поверх доски плавно летящую фишку от старой точки к новой, на время
- * прячем «настоящую» фишку в месте назначения. Взятие (когда фишка соперника
- * одновременно уходит на бар) даёт более сложный диф — в этом случае просто
- * не анимируем перелёт (перестраховка), доска обновится как раньше.
+ * прячем «настоящую» фишку в месте назначения. При БОЕ (взятии) дифф сложнее —
+ * атакующая фишка приходит на пункт, а сбитая фишка соперника уходит на бар;
+ * тогда анимируем ОБЕ фишки (см. ниже) и заметно медленнее.
  * ========================================================================== */
 type Loc = 'bar' | 'off' | number;
 
@@ -96,6 +96,8 @@ interface Flight {
   to: { cx: number; cy: number };
   destLoc: Loc;
   phase: 'start' | 'go';
+  /** Сбитая фишка соперника, одновременно улетающая на бар (только при бое). */
+  victim?: { color: Color; r: number; from: { cx: number; cy: number }; to: { cx: number; cy: number } };
 }
 
 function slotCounts(s: GameState): Map<string, number> {
@@ -164,37 +166,77 @@ export default function Board({
     const before = slotCounts(prev);
     const after = slotCounts(state);
     const keys = new Set([...before.keys(), ...after.keys()]);
-    let minusKey: string | null = null;
-    let plusKey: string | null = null;
-    let ambiguous = false;
+    interface Delta { key: string; d: number; color: Color; loc: Loc; }
+    const deltas: Delta[] = [];
     for (const k of keys) {
       const d = (after.get(k) ?? 0) - (before.get(k) ?? 0);
       if (d === 0) continue;
-      if (d === -1 && minusKey === null) minusKey = k;
-      else if (d === 1 && plusKey === null) plusKey = k;
-      else { ambiguous = true; break; }
+      if (Math.abs(d) !== 1) return; // необычный диф (восстановление/дубль-скачок) — не анимируем
+      const p = parseKey(k);
+      deltas.push({ key: k, d, color: p.color, loc: p.loc });
     }
-    if (ambiguous || !minusKey || !plusKey) return;
-    const src = parseKey(minusKey);
-    const dst = parseKey(plusKey);
-    if (src.color !== dst.color) return; // взятие фишки соперника — не пытаемся анимировать
+    const plus = deltas.filter((x) => x.d === 1);
+    const minus = deltas.filter((x) => x.d === -1);
 
-    const fromCount = before.get(minusKey)!;
-    const toCount = after.get(plusKey)!;
-    const from = slotPos(src.loc, src.color, fromCount);
-    const to = slotPos(dst.loc, dst.color, toCount);
-    const isMine = myColor != null && src.color === myColor;
-    flightIdRef.current += 1;
-    setFlight({
-      id: flightIdRef.current,
-      color: src.color,
-      r: to.r,
-      duration: isMine ? 260 : 1400, // чужой ход — заметно медленнее, чтобы было видно, куда пошла фишка
-      from: { cx: from.cx, cy: from.cy },
-      to: { cx: to.cx, cy: to.cy },
-      destLoc: dst.loc,
-      phase: 'start',
-    });
+    // Обычный ход: один источник (−1) и одна цель (+1) одного цвета.
+    if (plus.length === 1 && minus.length === 1 && plus[0].color === minus[0].color) {
+      const src = minus[0];
+      const dst = plus[0];
+      const from = slotPos(src.loc, src.color, before.get(src.key)!);
+      const to = slotPos(dst.loc, dst.color, after.get(dst.key)!);
+      const isMine = myColor != null && src.color === myColor;
+      flightIdRef.current += 1;
+      setFlight({
+        id: flightIdRef.current,
+        color: src.color,
+        r: to.r,
+        duration: isMine ? 260 : 1400, // чужой ход — медленнее, чтобы было видно, куда пошла фишка
+        from: { cx: from.cx, cy: from.cy },
+        to: { cx: to.cx, cy: to.cy },
+        destLoc: dst.loc,
+        phase: 'start',
+      });
+      return;
+    }
+
+    // Бой (взятие блота): атакующая фишка приходит на пункт, а сбитая фишка
+    // соперника ОДНОВРЕМЕННО улетает на бар. Анимируем ОБЕ и заметно медленнее —
+    // чтобы было ясно видно и куда пошла фишка, и что именно её сбило.
+    if (plus.length === 2 && minus.length === 2) {
+      const victimBar = plus.find((p) => p.loc === 'bar');
+      const moverDst = plus.find((p) => p.loc !== 'bar');
+      if (!victimBar || !moverDst) return;
+      const moverColor = moverDst.color;
+      const victimColor = victimBar.color;
+      if (moverColor === victimColor) return;
+      const moverSrc = minus.find((m) => m.color === moverColor);
+      const victimSrc = minus.find((m) => m.color === victimColor);
+      if (!moverSrc || !victimSrc) return;
+
+      const from = slotPos(moverSrc.loc, moverColor, before.get(moverSrc.key)!);
+      const to = slotPos(moverDst.loc, moverColor, after.get(moverDst.key)!);
+      const vFrom = slotPos(victimSrc.loc, victimColor, before.get(victimSrc.key)!);
+      const vTo = slotPos('bar', victimColor, after.get(victimBar.key)!);
+      const isMine = myColor != null && moverColor === myColor;
+      flightIdRef.current += 1;
+      setFlight({
+        id: flightIdRef.current,
+        color: moverColor,
+        r: to.r,
+        duration: isMine ? 950 : 1500,
+        from: { cx: from.cx, cy: from.cy },
+        to: { cx: to.cx, cy: to.cy },
+        destLoc: moverDst.loc,
+        phase: 'start',
+        victim: {
+          color: victimColor,
+          r: vFrom.r,
+          from: { cx: vFrom.cx, cy: vFrom.cy },
+          to: { cx: vTo.cx, cy: vTo.cy },
+        },
+      });
+      return;
+    }
   }, [state, myColor]);
 
   // Через пару кадров после монтирования «трогаем» transform → включается transition.
@@ -220,7 +262,9 @@ export default function Board({
 
   // Пока летит фишка — не рисуем «настоящую» верхнюю фишку в месте назначения.
   const suppressPointIdx = flight && typeof flight.destLoc === 'number' ? flight.destLoc : null;
-  const suppressBarColor = flight && flight.destLoc === 'bar' ? flight.color : null;
+  // При бое прячем «настоящую» сбитую фишку на баре, пока она летит; для обычного
+  // хода на бар (в норме не бывает) — прежнее поведение.
+  const suppressBarColor = flight?.victim ? flight.victim.color : (flight && flight.destLoc === 'bar' ? flight.color : null);
   const suppressOffColor = flight && flight.destLoc === 'off' ? flight.color : null;
 
   // client → координаты viewBox.
@@ -376,7 +420,17 @@ export default function Board({
             className="bd-target" />;
         })}
 
-        {/* Летящая фишка обычного хода — плавный перелёт от старой точки к новой */}
+        {/* Летящая сбитая фишка соперника — улетает на бар одновременно с боем */}
+        {flight?.victim && (
+          <image href={IMG(flight.victim.color)} width={flight.victim.r * 2} height={flight.victim.r * 2}
+            className="bd-checker bd-fly"
+            style={{
+              transform: `translate(${(flight.phase === 'go' ? flight.victim.to.cx : flight.victim.from.cx) - flight.victim.r}px, ${(flight.phase === 'go' ? flight.victim.to.cy : flight.victim.from.cy) - flight.victim.r}px)`,
+              transition: flight.phase === 'go' ? `transform ${flight.duration}ms cubic-bezier(0.3, 0.1, 0.2, 1)` : 'none',
+            }} />
+        )}
+
+        {/* Летящая фишка обычного хода / атакующая фишка боя — от старой точки к новой */}
         {flight && (
           <image href={IMG(flight.color)} width={flight.r * 2} height={flight.r * 2}
             className="bd-checker bd-fly"
