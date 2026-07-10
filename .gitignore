@@ -1,0 +1,32 @@
+# deps
+node_modules
+# build
+dist
+dist-ssr
+*.local
+# env (секреты не коммитим!)
+.env
+.env.local
+.env.*.local
+# editor / os
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.log
+# supabase
+.supabase
+
+# --- build artifacts (генерируются, не коммитим) ---
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+vite.config.*.timestamp-*.mjs
+
+# --- неиспользуемые дубликаты ассетов ---
+/assets/
+public/assets/lobby-bg.png
+public/assets/lobby.png
+
+# --- ЛОКАЛЬНЫЕ СЕКРЕТЫ — НИКОГДА в репозиторий! ---
+Supabase.txt
