@@ -102,7 +102,12 @@ export function useGame(
   }, [render]);
 
   const roll = useCallback(() => {
-    if (phase !== 'humanRoll') return;
+    // Бросаем только в свою фазу и ТОЛЬКО если кости ещё не брошены. Второй
+    // guard (rolled) критичен: при пасе с бара фаза остаётся 'humanRoll' ещё
+    // ~2.4с (пока сработает авто-пас), и раньше повторный клик по кнопке
+    // перекидывал кости и плодил дублирующие таймеры endHuman — из-за чего ход
+    // мог «улететь» на лишнюю передачу и стороны менялись местами.
+    if (phase !== 'humanRoll' || gameRef.current.rolled) return;
     E.startTurn(gameRef.current);
     setRollId((n) => n + 1);
     render();

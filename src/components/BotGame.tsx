@@ -12,7 +12,9 @@ import DieFace from './board/DieFace';
 import PlayerPanel from './PlayerPanel';
 import Modal from './Modal';
 import GameSettingsModal from './GameSettingsModal';
-import { IconGear } from './icons';
+import GameChat from './GameChat';
+import { IconGear, IconExit } from './icons';
+import { useNavGuardRef } from '../lib/navGuard';
 import { useAuth } from '../lib/auth';
 import { useBotGameSession } from '../game/BotGameSession';
 
@@ -22,6 +24,7 @@ interface Props {
 
 export default function BotGame({ onNewGame }: Props) {
   const auth = useAuth();
+  const guard = useNavGuardRef();
   const { game: g, paused } = useBotGameSession();
   const targetSet = useMemo(() => new Set(g.targets.map((m) => m.to)), [g.targets]);
   const [overDismissed, setOverDismissed] = useState(false);
@@ -48,6 +51,15 @@ export default function BotGame({ onNewGame }: Props) {
           active={blackActive} turnKey={g.rollId} seconds={20} note={botNote}
         />
         <div className="game__board">
+          <button
+            type="button"
+            className="game__finish"
+            onClick={() => guard.requestLeave.current?.('/')}
+            aria-label="Завершить игру"
+            title="Завершить игру"
+          >
+            <IconExit />
+          </button>
           <div className={'game__status' + (whiteActive ? ' is-you' : '') + (isOpening ? ' game__status--opening' : '')}>
             {g.phase === 'openingRoll' && g.openingDice ? (
               <div className="opening-roll">
@@ -95,6 +107,13 @@ export default function BotGame({ onNewGame }: Props) {
           <IconGear />
         </button>
       </div>
+
+      <GameChat
+        className="game__chat"
+        selfName={auth.profile?.display_name ?? 'Вы'}
+        selfAvatarUrl={auth.profile?.avatar_url}
+        selfColor="w"
+      />
 
       {settingsOpen && <GameSettingsModal onClose={() => setSettingsOpen(false)} />}
 

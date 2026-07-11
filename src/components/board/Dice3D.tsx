@@ -66,7 +66,18 @@ function Cube({ value, rollId, dir, used }: { value: number; rollId: number; dir
     const r = restRotation(value);
     if (prefersReducedMotion()) { setRot(r); return; }
     accRef.current += 2; // +2 полных оборота на каждый бросок
-    setRot({ rx: r.rx + dir * 360 * accRef.current, ry: r.ry - 360 * accRef.current });
+    const target = { rx: r.rx + dir * 360 * accRef.current, ry: r.ry - 360 * accRef.current };
+    // ВАЖНО: применяем кувырок ЧЕРЕЗ два кадра, а не сразу. Кубики бота
+    // монтируются внутри async-цепочки хода, и React 18 склеивал начальный
+    // кадр (грань покоя) с этим setRot в один коммит — CSS-переход тогда не
+    // видел разницы «старт→финиш» и кубик прыгал на грань без кувырка (только
+    // звук). Отложенный setRot гарантирует отрисовку стартовой грани до старта
+    // перехода, поэтому анимация играет и у бота, и у человека одинаково.
+    let raf1 = 0, raf2 = 0;
+    raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => setRot(target));
+    });
+    return () => { cancelAnimationFrame(raf1); cancelAnimationFrame(raf2); };
   }, [value, rollId, dir]);
 
   const half = 'translateZ(var(--d3-half))';

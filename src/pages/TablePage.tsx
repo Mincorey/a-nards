@@ -5,11 +5,12 @@ import PlayerPanel from '../components/PlayerPanel';
 import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
 import GameSettingsModal from '../components/GameSettingsModal';
-import { IconGear } from '../components/icons';
+import GameChat from '../components/GameChat';
+import { IconGear, IconExit } from '../components/icons';
 import { useAuth } from '../lib/auth';
 import { useOnline } from '../lib/presence';
 import { useOnlineGame } from '../hooks/useOnlineGame';
-import { useRegisterNavGuard } from '../lib/navGuard';
+import { useRegisterNavGuard, useNavGuardRef } from '../lib/navGuard';
 import { getTable, leaveTable, startGame, subscribeTable, type TableFull } from '../lib/online';
 import { getFriends, createInvite, type MiniProfile } from '../lib/friends';
 import type { Color } from '../engine/types';
@@ -19,6 +20,7 @@ export default function TablePage() {
   const auth = useAuth();
   const nav = useNavigate();
   const { isOnline } = useOnline();
+  const guard = useNavGuardRef();
   const [data, setData] = useState<TableFull | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
@@ -129,6 +131,17 @@ export default function TablePage() {
         {panel('w')}
 
         <div className="game__board">
+          {activeGame && (
+            <button
+              type="button"
+              className="game__finish"
+              onClick={() => guard.requestLeave.current?.('/')}
+              aria-label="Завершить игру"
+              title="Завершить игру"
+            >
+              <IconExit />
+            </button>
+          )}
           {activeGame && <div className={'game__status' + (g.phase === 'myMove' || g.phase === 'myRoll' ? ' is-you' : '')}>{g.message}</div>}
           {g.game && g.state ? (
             <Board
@@ -193,6 +206,15 @@ export default function TablePage() {
           <IconGear />
         </button>
       </div>
+
+      {activeGame && mySeat && (
+        <GameChat
+          className="game__chat"
+          selfName={mySeat.profile?.display_name ?? 'Вы'}
+          selfAvatarUrl={mySeat.profile?.avatar_url}
+          selfColor={(myColor ?? 'w') as Color}
+        />
+      )}
 
       {settingsOpen && <GameSettingsModal onClose={() => setSettingsOpen(false)} />}
 

@@ -18,10 +18,15 @@ import { createContext, useContext, useEffect, useRef, type ReactNode } from 're
 export interface NavGuard {
   active: { current: boolean };
   onLeave: { current: (() => void) | null };
+  /** Запрос на выход из партии из САМОЙ игры (кнопка «завершить» над доской).
+   * App регистрирует сюда обработчик, который показывает ту же модалку
+   * подтверждения, что и клик по логотипу/меню. Игровые страницы вызывают
+   * requestLeave.current?.(to). */
+  requestLeave: { current: ((to: string) => void) | null };
 }
 
 function makeFallback(): NavGuard {
-  return { active: { current: false }, onLeave: { current: null } };
+  return { active: { current: false }, onLeave: { current: null }, requestLeave: { current: null } };
 }
 
 const Ctx = createContext<NavGuard>(makeFallback());
@@ -29,7 +34,8 @@ const Ctx = createContext<NavGuard>(makeFallback());
 export function NavGuardProvider({ children }: { children: ReactNode }) {
   const active = useRef(false);
   const onLeave = useRef<(() => void) | null>(null);
-  return <Ctx.Provider value={{ active, onLeave }}>{children}</Ctx.Provider>;
+  const requestLeave = useRef<((to: string) => void) | null>(null);
+  return <Ctx.Provider value={{ active, onLeave, requestLeave }}>{children}</Ctx.Provider>;
 }
 
 /** Страница вызывает на каждом рендере: isActive=true — сейчас идёт партия,

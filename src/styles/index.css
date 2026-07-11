@@ -8,7 +8,12 @@
   --text-dark: #2a1d10;
   --radius: 12px;
   --maxw: 1100px;
-  font-family: system-ui, 'Segoe UI', Roboto, Arial, sans-serif;
+  /* Единая ширина контентных страниц (вход/профиль/лобби/стол/друзья/правовые) —
+     чтобы при переходах ширина фреймов НЕ прыгала. */
+  --content-w: 820px;
+  /* Montserrat — строгий геометрический гротеск с полной кириллицей (Google Fonts,
+     подключён в index.html). Системные шрифты — резерв на время загрузки. */
+  font-family: 'Montserrat', system-ui, 'Segoe UI', Roboto, Arial, sans-serif;
 }
 
 * { box-sizing: border-box; }
@@ -96,6 +101,7 @@ body {
 .btn--danger { background: #8a2f22; color: #fff; font-weight: 700; border-color: transparent; }
 .btn--danger:hover { background: #a2382a; color: #fff; }
 
+.page { width: 100%; max-width: var(--content-w); margin: 10vh auto 0; }
 .page__title { color: var(--accent); margin-bottom: 0.25rem; }
 .page__phase { opacity: 0.6; font-size: 0.85rem; margin-top: 0; }
 .page__body { margin-top: 1rem; }
@@ -153,7 +159,7 @@ body {
 
 /* Ширина формы — как у остальных страниц (лобби/профиль). Верхний отступ
    опускает карточку ниже надписи A-NARDS на фоне, чтобы не перекрывать её. */
-.auth { width: 100%; max-width: 720px; margin: 11vh auto 0; }
+.auth { width: 100%; max-width: var(--content-w); margin: 10vh auto 0; }
 .auth__form { display: flex; flex-direction: column; gap: 0.85rem; }
 .auth__tabs { display: flex; gap: 0.4rem; }
 .field { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.9rem; }
@@ -184,7 +190,7 @@ body {
 .linkbtn { background: none; border: none; color: var(--wood-light); cursor: pointer; font-size: 0.9rem; padding: 0.3rem; text-decoration: underline; }
 .auth .btn + .btn { margin-top: 0.5rem; }
 
-.profile { width: 100%; max-width: 880px; margin: 8vh auto 0; }
+.profile { width: 100%; max-width: var(--content-w); margin: 10vh auto 0; }
 .profile__head { display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem; }
 .profile__id h1 { margin: 0; font-size: 1.4rem; color: var(--text); }
 .profile__uname { margin: 0.1rem 0; color: var(--wood-light); }
@@ -223,7 +229,7 @@ body {
 }
 
 /* =====================  Фаза 6 — Лобби и столы  ===================== */
-.lobby { max-width: 720px; margin: 0 auto; }
+.lobby { width: 100%; max-width: var(--content-w); margin: 10vh auto 0; }
 .lobby__head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
 .lobby__head h1 { margin: 0; color: var(--accent); }
 .lobby__actions { display: flex; gap: 0.5rem; }
@@ -240,7 +246,7 @@ body {
 .table-row__meta { font-size: 0.82rem; opacity: 0.75; }
 
 /* Комната стола */
-.table { max-width: 820px; margin: 0 auto; }
+.table { width: 100%; max-width: var(--content-w); margin: 10vh auto 0; }
 .tp-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
 .tp-head h1 { margin: 0; color: var(--accent); font-size: 1.4rem; }
 .tp-sub { font-size: 0.82rem; opacity: 0.7; }
@@ -261,7 +267,7 @@ body {
 .tp-waiting { text-align: center; display: flex; flex-direction: column; gap: 0.8rem; align-items: center; }
 
 /* =====================  Фаза 7 — Друзья и уведомления  ===================== */
-.friends { width: 100%; max-width: 880px; margin: 6vh auto 0; }
+.friends { width: 100%; max-width: var(--content-w); margin: 10vh auto 0; }
 .friends__title { color: var(--accent); margin: 0 0 1rem; }
 .friends__search { margin-bottom: 1rem; }
 .friends__search-row { display: flex; gap: 0.5rem; }
@@ -967,7 +973,7 @@ body::after {
 }
 
 /* =====================  Страницы-заглушки (Privacy/Terms/Contacts)  ===================== */
-.legal { max-width: 760px; margin: 0 auto; }
+.legal { width: 100%; max-width: var(--content-w); margin: 10vh auto 0; }
 .legal__card { text-align: left; }
 .legal__card h2 { color: var(--wood-light); font-size: 1.05rem; margin: 1.3rem 0 0.4rem; }
 .legal__card p { line-height: 1.65; opacity: 0.92; margin: 0 0 0.9rem; }
@@ -1010,10 +1016,10 @@ body::after {
   .auth, .profile, .legal, .lobby { margin-top: 3.2rem; }
 
   /* Item 5: форма входа/регистрации шире. */
-  .auth { max-width: 660px; }
+  .auth { max-width: var(--content-w); }
 
   /* Item 4: профиль и режим редактирования (общий контейнер) шире. */
-  .profile { max-width: 92vw; }
+  .profile { max-width: var(--content-w); }
 
   /* Item 4: карточка профиля после выхода (нет .profile__head) — ещё ниже. */
   .profile:not(:has(.profile__head)) > .card { margin-top: 2vh; }
@@ -1157,4 +1163,62 @@ body::after {
   }
   .game__gear-mobile:active { transform: translateX(-50%) scale(0.94); }
   .game__gear-mobile svg { display: block; }
+}
+
+/* =====================  Иконка «Завершить игру» над доской  ===================== */
+/* Строгая круглая кнопка в стиле шестерёнки настроек, в правой части НАД доской.
+   Открывает ту же модалку подтверждения выхода, что и клик по логотипу
+   (через navGuard.requestLeave → App). Работает и на десктопе, и на мобилке. */
+.game__finish {
+  position: absolute; top: 6px; right: 6px; z-index: 7;
+  display: inline-grid; place-items: center;
+  width: 38px; height: 38px; border-radius: 50%;
+  background: rgba(20, 12, 6, 0.55); color: var(--wood-light);
+  border: 1px solid rgba(216, 184, 120, 0.4); cursor: pointer;
+  font-size: 1.15rem;
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease, transform 0.1s ease;
+  backdrop-filter: blur(4px);
+}
+.game__finish:hover { background: rgba(184, 134, 47, 0.92); color: var(--text-dark); border-color: transparent; }
+.game__finish:active { transform: scale(0.94); }
+.game__finish svg { display: block; }
+
+/* =====================  Чат с готовыми фразами (под доской)  ===================== */
+.game__chat { width: 100%; max-width: 600px; margin: 0.7rem auto 0; }
+.gchat { display: flex; flex-direction: column; gap: 0.5rem; }
+.gchat__list {
+  display: flex; flex-direction: column; gap: 0.4rem;
+  height: 188px; overflow-y: auto; padding: 0.6rem;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(216, 184, 120, 0.22);
+  border-radius: 14px;
+}
+.gchat__empty { margin: auto; opacity: 0.6; font-size: 0.9rem; text-align: center; }
+.gchat__msg { display: flex; align-items: flex-end; gap: 0.45rem; max-width: 82%; }
+.gchat__msg--self { align-self: flex-end; flex-direction: row-reverse; }
+.gchat__ava {
+  flex: 0 0 auto; width: 28px; height: 28px; border-radius: 50%; overflow: hidden;
+  display: grid; place-items: center; font-size: 0.78rem; font-weight: 700;
+  background: rgba(255, 255, 255, 0.08); color: var(--wood-light);
+  border: 1px solid rgba(216, 184, 120, 0.35);
+}
+.gchat__ava img { width: 100%; height: 100%; object-fit: cover; }
+.gchat__ava--w { border-color: rgba(233, 211, 166, 0.65); }
+.gchat__ava--b { border-color: rgba(120, 92, 60, 0.65); }
+.gchat__bubble {
+  padding: 0.4rem 0.7rem; border-radius: 14px; font-size: 0.9rem; line-height: 1.3;
+  background: linear-gradient(180deg, #eac877, #c79a3e); color: #2a1d10; font-weight: 600;
+  border-bottom-right-radius: 4px; word-break: break-word;
+}
+.gchat__select {
+  width: 100%; padding: 0.55rem 0.8rem; border-radius: 12px;
+  background: rgba(0, 0, 0, 0.35); color: var(--cream);
+  border: 1px solid rgba(216, 184, 120, 0.35); font-size: 0.95rem; cursor: pointer;
+}
+.gchat__select:focus { outline: none; border-color: var(--accent); }
+
+@media (max-width: 820px) {
+  .game__chat { max-width: 100%; }
+  .gchat__list { height: 150px; }
+  .game__finish { width: 40px; height: 40px; background: rgba(20, 12, 6, 0.68); border-color: rgba(216, 184, 120, 0.45); }
 }

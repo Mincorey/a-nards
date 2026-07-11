@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import PlayPage from './pages/PlayPage';
@@ -26,6 +26,17 @@ export default function App() {
   // Пункт меню, на который пользователь кликнул во время активной партии —
   // ждём подтверждения вместо мгновенного перехода (см. lib/navGuard.tsx).
   const [pendingTo, setPendingTo] = useState<string | null>(null);
+
+  // Кнопка «завершить игру» над доской (в самой партии) зовёт guard.requestLeave.
+  // Если партия активна — показываем ту же модалку подтверждения, что и для
+  // клика по логотипу; иначе просто переходим.
+  useEffect(() => {
+    guard.requestLeave.current = (to: string) => {
+      if (guard.active.current) setPendingTo(to);
+      else navigate(to);
+    };
+    return () => { guard.requestLeave.current = null; };
+  }, [guard, navigate]);
 
   // hideMobile — пункт скрывается ТОЛЬКО в мобильной версии (класс .hide-mobile,
   // см. media max-width:560px в CSS). На мобильном в навбаре остаётся лишь «Вход»
