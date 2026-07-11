@@ -13,8 +13,10 @@ import PlayerPanel from './PlayerPanel';
 import Modal from './Modal';
 import GameSettingsModal from './GameSettingsModal';
 import GameChat from './GameChat';
+import ChatPickerModal from './ChatPickerModal';
 import { IconGear, IconExit } from './icons';
 import { useNavGuardRef } from '../lib/navGuard';
+import { useGameChat } from '../game/chat';
 import { useAuth } from '../lib/auth';
 import { useBotGameSession } from '../game/BotGameSession';
 
@@ -29,6 +31,11 @@ export default function BotGame({ onNewGame }: Props) {
   const targetSet = useMemo(() => new Set(g.targets.map((m) => m.to)), [g.targets]);
   const [overDismissed, setOverDismissed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+
+  const selfName = auth.profile?.display_name ?? 'Вы';
+  const selfAvatar = auth.profile?.avatar_url ?? null;
+  const chat = useGameChat({ name: selfName, avatarUrl: selfAvatar, color: 'w' });
 
   // Как только партия перестала быть завершённой (новый старт/сброс) — снова
   // разрешаем показывать модалку победы для следующего завершения.
@@ -82,11 +89,13 @@ export default function BotGame({ onNewGame }: Props) {
           />
         </div>
         <PlayerPanel
-          className="game__p" name={auth.profile?.display_name ?? 'Вы'} color="w" you online
-          avatarUrl={auth.profile?.avatar_url}
+          className="game__p" name={selfName} color="w" you online
+          avatarUrl={selfAvatar}
           active={whiteActive} turnKey={g.rollId} seconds={45} note={youNote}
           onSettings={() => setSettingsOpen(true)}
           onFinish={() => guard.requestLeave.current?.('/')}
+          onChat={() => setChatOpen(true)}
+          chatBubble={chat.lastSelf}
         />
 
         <button
@@ -109,14 +118,10 @@ export default function BotGame({ onNewGame }: Props) {
         </button>
       </div>
 
-      <GameChat
-        className="game__chat"
-        selfName={auth.profile?.display_name ?? 'Вы'}
-        selfAvatarUrl={auth.profile?.avatar_url}
-        selfColor="w"
-      />
+      <GameChat className="game__chat" messages={chat.messages} onSend={chat.send} />
 
       {settingsOpen && <GameSettingsModal onClose={() => setSettingsOpen(false)} />}
+      {chatOpen && <ChatPickerModal onPick={chat.send} onClose={() => setChatOpen(false)} />}
 
       {g.phase === 'gameover' && !overDismissed && (
         <Modal onClose={() => setOverDismissed(true)}>

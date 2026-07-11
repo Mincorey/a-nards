@@ -1041,6 +1041,8 @@ body::after {
 /* По умолчанию (десктоп/портрет) уведомления показываются центральным
    .game__status над доской — бабблы над аватарами скрыты. */
 .pp__note { display: none; }
+/* Облачко чата под аватаром — только в мобильном ландшафте. */
+.pp__chat-bubble { display: none; }
 
 /* Заморозка кольца таймера хода, когда партия на паузе (открыт оверлей). */
 .game__table.is-paused .pp__ring-fg { animation-play-state: paused; }
@@ -1113,7 +1115,7 @@ body::after {
 
 /* Десктоп: строгие круглые кнопки над аватаром игрока — выход (.pp__finish)
    стоит НАД шестерёнкой настроек (.pp__gear). */
-.pp__gear, .pp__finish {
+.pp__gear, .pp__finish, .pp__chat {
   display: inline-grid; place-items: center;
   width: 38px; height: 38px; border-radius: 50%;
   background: rgba(20, 12, 6, 0.55); color: var(--wood-light);
@@ -1122,9 +1124,11 @@ body::after {
   transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease, transform 0.1s ease;
   backdrop-filter: blur(4px);
 }
-.pp__gear:hover, .pp__finish:hover { background: rgba(184, 134, 47, 0.92); color: var(--text-dark); border-color: transparent; }
-.pp__gear:active, .pp__finish:active { transform: scale(0.94); }
-.pp__gear svg, .pp__finish svg { display: block; }
+.pp__gear:hover, .pp__finish:hover, .pp__chat:hover { background: rgba(184, 134, 47, 0.92); color: var(--text-dark); border-color: transparent; }
+.pp__gear:active, .pp__finish:active, .pp__chat:active { transform: scale(0.94); }
+.pp__gear svg, .pp__finish svg, .pp__chat svg { display: block; }
+/* Кнопка чата — только в мобильном ландшафте (см. блок landscape ниже). */
+.pp__chat { display: none; }
 
 /* Мобильные кнопки (по центру между аватарами) — на десктопе скрыты. */
 .game__gear-mobile, .game__finish-mobile { display: none; }
@@ -1159,8 +1163,23 @@ body::after {
 }
 .gset__label { font-size: 1rem; }
 
+/* Модалка выбора фразы (мобильный ландшафт). */
+.modal__card.chatpick { text-align: left; max-width: 380px; width: 92vw; padding: 1.4rem 1.3rem 1.2rem; }
+.chatpick__list { list-style: none; margin: 0.6rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.chatpick__option {
+  width: 100%; text-align: left; cursor: pointer;
+  padding: 0.7rem 0.9rem; border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(216, 184, 120, 0.3);
+  color: var(--cream); font-size: 1rem;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.chatpick__option:hover, .chatpick__option:focus-visible {
+  background: linear-gradient(180deg, #eac877, #c79a3e); color: #2a1d10; font-weight: 600;
+  border-color: transparent; outline: none;
+}
+
 @media (max-width: 820px) {
-  .pp__gear, .pp__finish { display: none; }
+  .pp__gear, .pp__finish, .pp__chat { display: none; }
   .game__gear-mobile, .game__finish-mobile {
     display: inline-grid; place-items: center;
     position: absolute; left: 50%; transform: translateX(-50%);
@@ -1241,4 +1260,31 @@ body::after {
 @media (max-width: 820px) {
   .game__chat { max-width: 100%; }
   .gchat__list { height: 116px; }
+}
+
+
+/* =====================  Мобильный ЛАНДШАФТ: чат иконкой + облачко  =====================
+   Этот блок стоит ПОСЛЕ @media (max-width:820) намеренно — чтобы переопределить
+   его правила для узких телефонов в ландшафте (иначе там показывались бы
+   центральные мобильные кнопки, а не стойка в панели игрока). */
+@media (orientation: landscape) and (max-height: 600px), (orientation: landscape) and (pointer: coarse) and (max-width: 1000px) {
+  /* Стойка кнопок игрока (выход → чат → настройки) всегда в панели сбоку. */
+  .pp__gear, .pp__finish, .pp__chat { display: inline-grid; width: 34px; height: 34px; font-size: 1.02rem; }
+  .game__gear-mobile, .game__finish-mobile { display: none; }
+
+  /* Окно чата под доской убрано — фразы выбираются иконкой чата → модалкой,
+     сообщение всплывает облачком под аватаром отправителя. Освободившееся
+     место отдаём доске (крупнее, чем было 75vh). */
+  .game__chat { display: none; }
+  .game__board .bd-wrap { width: 84vh; height: 84vh; max-width: 84vh; max-height: 84vh; }
+
+  /* Облачко чата под именем отправителя. */
+  .pp__chat-bubble {
+    display: block; max-width: 12rem; margin: 0.35rem auto 0;
+    padding: 0.3rem 0.6rem; border-radius: 12px;
+    font-size: 0.78rem; line-height: 1.2; text-align: center;
+    background: linear-gradient(180deg, #eac877, #c79a3e); color: #2a1d10; font-weight: 600;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    animation: pp-note-in 0.2s ease both;
+  }
 }

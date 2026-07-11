@@ -1,11 +1,15 @@
 /* =============================================================================
  * PlayerPanel.tsx — Панель игрока сбоку от доски: круглый аватар с кольцом
  * таймера хода, ник. Кольцо истощается, пока ход этого игрока.
- * note — необязательное уведомление о ходе игры; в мобильном ландшафте (см. CSS)
- * показывается бабблом над аватаром именно этого игрока.
+ * Кнопки (для локального игрока): выход (onFinish) → чат (onChat) → настройки
+ * (onSettings), сверху вниз. Кнопка чата видна ТОЛЬКО в мобильном ландшафте
+ * (управляется CSS) — там окно чата под доской убрано ради места, и фраза
+ * выбирается через модалку, всплывая облачком под аватаром (chatBubble).
+ * note — уведомление о ходе (в ландшафте — баббл НАД аватаром).
  * ========================================================================== */
+import { useEffect, useState } from 'react';
 import type { Color } from '../engine/types';
-import { IconGear, IconExit } from './icons';
+import { IconGear, IconExit, IconChat } from './icons';
 
 export interface PlayerPanelProps {
   name: string;
@@ -23,6 +27,11 @@ export interface PlayerPanelProps {
   onSettings?: () => void;
   /** Если задан и you=true — показывает кнопку выхода из партии НАД шестерёнкой. */
   onFinish?: () => void;
+  /** Если задан и you=true — показывает кнопку чата (между выходом и настройками);
+   *  видна только в мобильном ландшафте (см. CSS). */
+  onChat?: () => void;
+  /** Последнее отправленное сообщение — всплывает облачком под аватаром (ландшафт). */
+  chatBubble?: { id: number; text: string } | null;
   className?: string;
 }
 
@@ -30,9 +39,21 @@ const R = 46;
 const C = 2 * Math.PI * R;
 
 export default function PlayerPanel({
-  name, color, avatarUrl, active, turnKey, seconds = 45, you, online, note, onSettings, onFinish, className = '',
+  name, color, avatarUrl, active, turnKey, seconds = 45, you, online, note,
+  onSettings, onFinish, onChat, chatBubble, className = '',
 }: PlayerPanelProps) {
   const initial = (name || '?').trim().slice(0, 1).toUpperCase();
+
+  // Облачко чата под аватаром: показываем последнее сообщение и прячем через ~6с.
+  const [bubbleText, setBubbleText] = useState<string | null>(null);
+  useEffect(() => {
+    if (!chatBubble) return;
+    setBubbleText(chatBubble.text);
+    const t = window.setTimeout(() => setBubbleText(null), 6000);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatBubble?.id]);
+
   return (
     <div className={'pp ' + className + (active ? ' is-active' : '')}>
       {you && onFinish && (
@@ -44,6 +65,17 @@ export default function PlayerPanel({
           title="Завершить игру"
         >
           <IconExit />
+        </button>
+      )}
+      {you && onChat && (
+        <button
+          type="button"
+          className="pp__chat"
+          onClick={onChat}
+          aria-label="Сообщение"
+          title="Сообщение"
+        >
+          <IconChat />
         </button>
       )}
       {you && onSettings && (
@@ -82,6 +114,7 @@ export default function PlayerPanel({
         )}
       </div>
       <div className="pp__name">{name}{you ? ' (вы)' : ''}</div>
+      {bubbleText && <div className="pp__chat-bubble">{bubbleText}</div>}
     </div>
   );
 }

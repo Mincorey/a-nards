@@ -6,6 +6,7 @@ import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
 import GameSettingsModal from '../components/GameSettingsModal';
 import GameChat from '../components/GameChat';
+import ChatPickerModal from '../components/ChatPickerModal';
 import { IconGear, IconExit } from '../components/icons';
 import { useAuth } from '../lib/auth';
 import { useOnline } from '../lib/presence';
@@ -13,6 +14,7 @@ import { useOnlineGame } from '../hooks/useOnlineGame';
 import { useRegisterNavGuard, useNavGuardRef } from '../lib/navGuard';
 import { getTable, leaveTable, startGame, subscribeTable, type TableFull } from '../lib/online';
 import { getFriends, createInvite, type MiniProfile } from '../lib/friends';
+import { useGameChat } from '../game/chat';
 import type { Color } from '../engine/types';
 
 export default function TablePage() {
@@ -30,6 +32,7 @@ export default function TablePage() {
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [overDismissed, setOverDismissed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
 
   const reload = useCallback(() => {
     getTable(id).then(setData).catch((e) => setError(e instanceof Error ? e.message : 'Ошибка'));
@@ -48,6 +51,10 @@ export default function TablePage() {
   );
   const myColor: Color | null = mySeat ? (mySeat.color as Color) : null;
   const g = useOnlineGame(id, myColor);
+
+  const selfName = mySeat?.profile?.display_name ?? 'Вы';
+  const selfAvatar = mySeat?.profile?.avatar_url ?? null;
+  const chat = useGameChat({ name: selfName, avatarUrl: selfAvatar, color: (myColor ?? 'w') as Color });
 
   useEffect(() => { if (g.phase !== 'gameover') setOverDismissed(false); }, [g.phase]);
 
@@ -111,6 +118,8 @@ export default function TablePage() {
         online={s?.user_id ? isOnline(s.user_id) : undefined}
         onSettings={color === myColor ? () => setSettingsOpen(true) : undefined}
         onFinish={color === myColor && activeGame ? () => guard.requestLeave.current?.('/') : undefined}
+        onChat={color === myColor && activeGame ? () => setChatOpen(true) : undefined}
+        chatBubble={color === myColor ? chat.lastSelf : null}
       />
     );
   }
@@ -209,15 +218,11 @@ export default function TablePage() {
       </div>
 
       {activeGame && mySeat && (
-        <GameChat
-          className="game__chat"
-          selfName={mySeat.profile?.display_name ?? 'Вы'}
-          selfAvatarUrl={mySeat.profile?.avatar_url}
-          selfColor={(myColor ?? 'w') as Color}
-        />
+        <GameChat className="game__chat" messages={chat.messages} onSend={chat.send} />
       )}
 
       {settingsOpen && <GameSettingsModal onClose={() => setSettingsOpen(false)} />}
+      {chatOpen && <ChatPickerModal onPick={chat.send} onClose={() => setChatOpen(false)} />}
 
       {g.phase === 'gameover' && !overDismissed && (
         <Modal onClose={() => setOverDismissed(true)}>

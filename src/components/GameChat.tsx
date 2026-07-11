@@ -1,42 +1,22 @@
 /* =============================================================================
- * GameChat.tsx — Окно чата под доской с ЗАРАНЕЕ ПОДГОТОВЛЕННЫМИ фразами.
- * Свободного ввода нет — игрок выбирает фразу из КАСТОМНОГО выпадающего списка
- * (стилизован под дизайн сайта, а не системный select), и она появляется
- * облачком в ленте. Лента вмещает последние сообщения, прокручивается, у каждого
- * сообщения — маленький аватар отправителя. Пока фразы отправляет только
- * локальный игрок (тестовый набор); онлайн-синхронизация — отдельный шаг.
+ * GameChat.tsx — Окно чата ПОД ДОСКОЙ (портрет/десктоп). Управляемый компонент:
+ * список сообщений и отправка приходят сверху (см. game/chat.ts, useGameChat),
+ * потому что в мобильном ландшафте те же сообщения показываются иначе
+ * (иконка → модалка → облачко под аватаром), а источник данных общий.
+ * Свободного ввода нет — фраза выбирается из КАСТОМНОГО выпадающего списка
+ * (стилизован под сайт, не системный select).
  * ========================================================================== */
 import { useEffect, useRef, useState } from 'react';
-import type { Color } from '../engine/types';
+import { CHAT_PHRASES, type ChatMessage } from '../game/chat';
 import { IconChevron } from './icons';
 
-/** Тестовый набор готовых фраз. Позже вынесем/расширим. */
-const CHAT_PHRASES: string[] = [
-  'Вот бля...',
-  'Охуеть - не встать!',
-  'Пиздец',
-];
-
-let msgSeq = 0;
-
-interface ChatMessage {
-  id: number;
-  text: string;
-  name: string;
-  avatarUrl?: string | null;
-  color: Color;
-}
-
 export interface GameChatProps {
-  /** Имя и аватар локального игрока (автор отправляемых фраз). */
-  selfName: string;
-  selfAvatarUrl?: string | null;
-  selfColor: Color;
+  messages: ChatMessage[];
+  onSend: (text: string) => void;
   className?: string;
 }
 
-export default function GameChat({ selfName, selfAvatarUrl, selfColor, className = '' }: GameChatProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+export default function GameChat({ messages, onSend, className = '' }: GameChatProps) {
   const [open, setOpen] = useState(false);
   const listRef = useRef<HTMLDivElement | null>(null);
   const pickerRef = useRef<HTMLDivElement | null>(null);
@@ -62,11 +42,8 @@ export default function GameChat({ selfName, selfAvatarUrl, selfColor, className
     };
   }, [open]);
 
-  function send(text: string) {
-    setMessages((prev) => [
-      ...prev,
-      { id: ++msgSeq, text, name: selfName, avatarUrl: selfAvatarUrl, color: selfColor },
-    ]);
+  function pickPhrase(text: string) {
+    onSend(text);
     setOpen(false);
   }
 
@@ -94,7 +71,7 @@ export default function GameChat({ selfName, selfAvatarUrl, selfColor, className
           <ul className="gchat__menu" role="listbox">
             {CHAT_PHRASES.map((p) => (
               <li key={p}>
-                <button type="button" className="gchat__option" role="option" aria-selected="false" onClick={() => send(p)}>
+                <button type="button" className="gchat__option" role="option" aria-selected="false" onClick={() => pickPhrase(p)}>
                   {p}
                 </button>
               </li>

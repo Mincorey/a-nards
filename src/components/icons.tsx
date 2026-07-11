@@ -84,6 +84,15 @@ export function IconPencil(props: IconProps) {
   );
 }
 
+/** Речевое облачко — чат/сообщения. */
+export function IconChat(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v9a1.5 1.5 0 0 1-1.5 1.5H9l-4 3.5V16H5.5A1.5 1.5 0 0 1 4 14.5Z" />
+    </svg>
+  );
+}
+
 /** Шеврон вниз — раскрытие выпадающего списка. */
 export function IconChevron(props: IconProps) {
   return (
