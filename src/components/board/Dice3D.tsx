@@ -10,6 +10,7 @@
  * ========================================================================== */
 import { useEffect, useRef, useState } from 'react';
 import './dice3d.css';
+import { playDiceRoll } from '../../lib/sound';
 
 /** Точки на грани (как в 2D-кубике), доли грани 0..1. */
 const PIPS: Record<number, [number, number][]> = {
@@ -96,6 +97,17 @@ export interface Dice3DProps {
 }
 
 export default function Dice3D({ values, remaining, rollId, size, left, top }: Dice3DProps) {
+  // Звук броска: играем ОДИН раз на каждый новый бросок (смену rollId), когда
+  // кубики реально показаны. Момент совпадает с началом кувырка — общий и для
+  // партии с ботом, и для онлайна (оба рендерят Board→Dice3D с этим rollId).
+  const lastPlayedRoll = useRef<number | null>(null);
+  useEffect(() => {
+    if (values.length < 2) return;
+    if (lastPlayedRoll.current === rollId) return;
+    lastPlayedRoll.current = rollId;
+    playDiceRoll();
+  }, [rollId, values.length]);
+
   if (values.length < 2) return null;
   const [a, b] = values;
   const isDouble = a === b;
