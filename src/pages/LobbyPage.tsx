@@ -124,7 +124,7 @@ export default function LobbyPage() {
             <p className="setup__subtitle">Название, вид нард и с кем сесть за стол</p>
             <label className="field">
               <span>Название стола</span>
-              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Партия Олега" autoFocus />
+              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Например: вечерняя партия" autoFocus />
             </label>
             <div className="setup__group">
               <span className="setup__label"><IconDice /> Вид нард</span>

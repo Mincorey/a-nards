@@ -151,7 +151,9 @@ body {
 }
 .card h1 { margin: 0 0 0.8rem; font-size: 1.5rem; color: var(--accent); }
 
-.auth { max-width: 500px; margin: 4vh auto 0; }
+/* Ширина формы — как у остальных страниц (лобби/профиль). Верхний отступ
+   опускает карточку ниже надписи A-NARDS на фоне, чтобы не перекрывать её. */
+.auth { max-width: 720px; margin: 11vh auto 0; }
 .auth__form { display: flex; flex-direction: column; gap: 0.85rem; }
 .auth__tabs { display: flex; gap: 0.4rem; }
 .field { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.9rem; }
@@ -182,7 +184,7 @@ body {
 .linkbtn { background: none; border: none; color: var(--wood-light); cursor: pointer; font-size: 0.9rem; padding: 0.3rem; text-decoration: underline; }
 .auth .btn + .btn { margin-top: 0.5rem; }
 
-.profile { max-width: 720px; margin: 0 auto; }
+.profile { max-width: 820px; margin: 8vh auto 0; }
 .profile__head { display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem; }
 .profile__id h1 { margin: 0; font-size: 1.4rem; color: var(--text); }
 .profile__uname { margin: 0.1rem 0; color: var(--wood-light); }

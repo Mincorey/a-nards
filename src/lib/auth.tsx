@@ -11,6 +11,7 @@ import {
 import type { ReactNode } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured } from './supabase';
+import { compressAvatar } from './image';
 
 export interface Profile {
   id: string;
@@ -121,10 +122,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const uploadAvatar = useCallback<AuthContextValue['uploadAvatar']>(async (file) => {
     if (!userId) throw new Error('Не авторизован');
-    const ext = (file.name.split('.').pop() || 'png').toLowerCase();
+    // Сжимаем до квадрата 512px (WebP/JPEG) — экономия места в хранилище/БД.
+    const compressed = await compressAvatar(file, { maxSize: 512, quality: 0.85 });
+    const ext = (compressed.type === 'image/webp' ? 'webp'
+      : compressed.type === 'image/jpeg' ? 'jpg'
+      : (compressed.name.split('.').pop() || 'png').toLowerCase());
     const path = `${userId}/avatar_${Date.now()}.${ext}`;
     const { error: upErr } = await supabase.storage
-      .from('avatars').upload(path, file, { upsert: true, cacheControl: '3600' });
+      .from('avatars').upload(path, compressed, {
+        upsert: true, cacheControl: '3600', contentType: compressed.type || undefined,
+      });
     if (upErr) throw upErr;
     const { data } = supabase.storage.from('avatars').getPublicUrl(path);
     const url = data.publicUrl;
