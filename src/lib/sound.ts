@@ -2,6 +2,8 @@
 // эффект, чтобы не создавать новый объект на каждый бросок. Все ошибки/блокировки
 // автоплея молча гасим — звук не критичен для игры.
 
+import { isDiceSoundEnabled } from './gameSettings';
+
 let diceAudio: HTMLAudioElement | null = null;
 
 /**
@@ -12,6 +14,7 @@ let diceAudio: HTMLAudioElement | null = null;
  */
 export function playDiceRoll(): void {
   if (typeof window === 'undefined' || typeof Audio === 'undefined') return;
+  if (!isDiceSoundEnabled()) return;
   try {
     if (!diceAudio) {
       diceAudio = new Audio('/sound/throw_of_dice.mp3');

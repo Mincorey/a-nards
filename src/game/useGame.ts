@@ -169,7 +169,9 @@ export function useGame(
       const humanStarts = h > b;
       setMessage(humanStarts ? 'Вы начинаете первым!' : 'Первым ходит соперник');
       await waitResume();
-      await sleep(1700);
+      // Показываем результат стартового броска дольше (было 1700 мс) — чтобы
+      // игрок успел разглядеть, какие кости выпали и кто ходит первым.
+      await sleep(4000);
       if (cancelled || !mounted.current) return;
       gameRef.current.turn = humanStarts ? humanColor : E.opp(humanColor);
       setOpeningDice(null);

@@ -4,6 +4,8 @@ import Board from '../components/board/Board';
 import PlayerPanel from '../components/PlayerPanel';
 import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
+import GameSettingsModal from '../components/GameSettingsModal';
+import { IconGear } from '../components/icons';
 import { useAuth } from '../lib/auth';
 import { useOnline } from '../lib/presence';
 import { useOnlineGame } from '../hooks/useOnlineGame';
@@ -25,6 +27,7 @@ export default function TablePage() {
   const [note, setNote] = useState<string | null>(null);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [overDismissed, setOverDismissed] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const reload = useCallback(() => {
     getTable(id).then(setData).catch((e) => setError(e instanceof Error ? e.message : 'Ошибка'));
@@ -104,6 +107,7 @@ export default function TablePage() {
         active={isTurn} turnKey={g.rollId} seconds={60}
         you={color === myColor}
         online={s?.user_id ? isOnline(s.user_id) : undefined}
+        onSettings={color === myColor ? () => setSettingsOpen(true) : undefined}
       />
     );
   }
@@ -178,7 +182,19 @@ export default function TablePage() {
         </div>
 
         {panel('b')}
+
+        <button
+          type="button"
+          className="game__gear-mobile"
+          onClick={() => setSettingsOpen(true)}
+          aria-label="Настройки игры"
+          title="Настройки игры"
+        >
+          <IconGear />
+        </button>
       </div>
+
+      {settingsOpen && <GameSettingsModal onClose={() => setSettingsOpen(false)} />}
 
       {g.phase === 'gameover' && !overDismissed && (
         <Modal onClose={() => setOverDismissed(true)}>

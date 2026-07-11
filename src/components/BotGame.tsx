@@ -11,6 +11,8 @@ import Board from './board/Board';
 import DieFace from './board/DieFace';
 import PlayerPanel from './PlayerPanel';
 import Modal from './Modal';
+import GameSettingsModal from './GameSettingsModal';
+import { IconGear } from './icons';
 import { useAuth } from '../lib/auth';
 import { useBotGameSession } from '../game/BotGameSession';
 
@@ -23,6 +25,7 @@ export default function BotGame({ onNewGame }: Props) {
   const { game: g, paused } = useBotGameSession();
   const targetSet = useMemo(() => new Set(g.targets.map((m) => m.to)), [g.targets]);
   const [overDismissed, setOverDismissed] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Как только партия перестала быть завершённой (новый старт/сброс) — снова
   // разрешаем показывать модалку победы для следующего завершения.
@@ -79,8 +82,21 @@ export default function BotGame({ onNewGame }: Props) {
           className="game__p" name={auth.profile?.display_name ?? 'Вы'} color="w" you online
           avatarUrl={auth.profile?.avatar_url}
           active={whiteActive} turnKey={g.rollId} seconds={45} note={youNote}
+          onSettings={() => setSettingsOpen(true)}
         />
+
+        <button
+          type="button"
+          className="game__gear-mobile"
+          onClick={() => setSettingsOpen(true)}
+          aria-label="Настройки игры"
+          title="Настройки игры"
+        >
+          <IconGear />
+        </button>
       </div>
+
+      {settingsOpen && <GameSettingsModal onClose={() => setSettingsOpen(false)} />}
 
       {g.phase === 'gameover' && !overDismissed && (
         <Modal onClose={() => setOverDismissed(true)}>

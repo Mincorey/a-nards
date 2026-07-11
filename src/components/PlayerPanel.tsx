@@ -5,6 +5,7 @@
  * показывается бабблом над аватаром именно этого игрока.
  * ========================================================================== */
 import type { Color } from '../engine/types';
+import { IconGear } from './icons';
 
 export interface PlayerPanelProps {
   name: string;
@@ -18,6 +19,8 @@ export interface PlayerPanelProps {
   online?: boolean;
   /** Уведомление о ходе игры (в ландшафте — баббл над аватаром). */
   note?: string | null;
+  /** Если задан и you=true — показывает шестерёнку настроек над аватаром. */
+  onSettings?: () => void;
   className?: string;
 }
 
@@ -25,11 +28,22 @@ const R = 46;
 const C = 2 * Math.PI * R;
 
 export default function PlayerPanel({
-  name, color, avatarUrl, active, turnKey, seconds = 45, you, online, note, className = '',
+  name, color, avatarUrl, active, turnKey, seconds = 45, you, online, note, onSettings, className = '',
 }: PlayerPanelProps) {
   const initial = (name || '?').trim().slice(0, 1).toUpperCase();
   return (
     <div className={'pp ' + className + (active ? ' is-active' : '')}>
+      {you && onSettings && (
+        <button
+          type="button"
+          className="pp__gear"
+          onClick={onSettings}
+          aria-label="Настройки игры"
+          title="Настройки игры"
+        >
+          <IconGear />
+        </button>
+      )}
       {note ? <div className="pp__note">{note}</div> : null}
       <div className="pp__ring">
         <svg viewBox="0 0 108 108" className="pp__ring-svg" aria-hidden="true">
