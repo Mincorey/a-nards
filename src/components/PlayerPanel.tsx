@@ -5,7 +5,7 @@
  * показывается бабблом над аватаром именно этого игрока.
  * ========================================================================== */
 import type { Color } from '../engine/types';
-import { IconGear } from './icons';
+import { IconGear, IconExit } from './icons';
 
 export interface PlayerPanelProps {
   name: string;
@@ -21,6 +21,8 @@ export interface PlayerPanelProps {
   note?: string | null;
   /** Если задан и you=true — показывает шестерёнку настроек над аватаром. */
   onSettings?: () => void;
+  /** Если задан и you=true — показывает кнопку выхода из партии НАД шестерёнкой. */
+  onFinish?: () => void;
   className?: string;
 }
 
@@ -28,11 +30,22 @@ const R = 46;
 const C = 2 * Math.PI * R;
 
 export default function PlayerPanel({
-  name, color, avatarUrl, active, turnKey, seconds = 45, you, online, note, onSettings, className = '',
+  name, color, avatarUrl, active, turnKey, seconds = 45, you, online, note, onSettings, onFinish, className = '',
 }: PlayerPanelProps) {
   const initial = (name || '?').trim().slice(0, 1).toUpperCase();
   return (
     <div className={'pp ' + className + (active ? ' is-active' : '')}>
+      {you && onFinish && (
+        <button
+          type="button"
+          className="pp__finish"
+          onClick={onFinish}
+          aria-label="Завершить игру"
+          title="Завершить игру"
+        >
+          <IconExit />
+        </button>
+      )}
       {you && onSettings && (
         <button
           type="button"

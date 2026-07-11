@@ -110,6 +110,7 @@ export default function TablePage() {
         you={color === myColor}
         online={s?.user_id ? isOnline(s.user_id) : undefined}
         onSettings={color === myColor ? () => setSettingsOpen(true) : undefined}
+        onFinish={color === myColor && activeGame ? () => guard.requestLeave.current?.('/') : undefined}
       />
     );
   }
@@ -131,17 +132,6 @@ export default function TablePage() {
         {panel('w')}
 
         <div className="game__board">
-          {activeGame && (
-            <button
-              type="button"
-              className="game__finish"
-              onClick={() => guard.requestLeave.current?.('/')}
-              aria-label="Завершить игру"
-              title="Завершить игру"
-            >
-              <IconExit />
-            </button>
-          )}
           {activeGame && <div className={'game__status' + (g.phase === 'myMove' || g.phase === 'myRoll' ? ' is-you' : '')}>{g.message}</div>}
           {g.game && g.state ? (
             <Board
@@ -205,6 +195,17 @@ export default function TablePage() {
         >
           <IconGear />
         </button>
+        {activeGame && (
+          <button
+            type="button"
+            className="game__finish-mobile"
+            onClick={() => guard.requestLeave.current?.('/')}
+            aria-label="Завершить игру"
+            title="Завершить игру"
+          >
+            <IconExit />
+          </button>
+        )}
       </div>
 
       {activeGame && mySeat && (

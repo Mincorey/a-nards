@@ -5,26 +5,28 @@ import GameChat from './GameChat';
 
 describe('GameChat — чат с готовыми фразами', () => {
   afterEach(cleanup);
-  it('показывает пустое состояние и выпадающий список фраз', () => {
+
+  it('пустое состояние + триггер выпадающего списка', () => {
     render(<GameChat selfName="Олег" selfColor="w" />);
     expect(screen.getByText(/Сообщений пока нет/)).toBeTruthy();
-    // Плейсхолдер + 3 тестовые фразы в списке.
-    const select = screen.getByLabelText('Выберите сообщение') as HTMLSelectElement;
-    expect(select.options.length).toBe(4);
-    expect(within(select).getByText('Вот бля...')).toBeTruthy();
-    expect(within(select).getByText('Пиздец')).toBeTruthy();
+    const trigger = screen.getByRole('button', { name: /Выберите сообщение/ });
+    expect(trigger.getAttribute('aria-expanded')).toBe('false');
+    // Меню закрыто — опций нет.
+    expect(screen.queryByRole('option')).toBeNull();
   });
 
-  it('выбор фразы добавляет облачко в ленту от игрока', () => {
+  it('открытие меню и выбор фразы добавляет облачко от игрока', () => {
     render(<GameChat selfName="Олег" selfColor="w" />);
-    const select = screen.getByLabelText('Выберите сообщение') as HTMLSelectElement;
-    fireEvent.change(select, { target: { value: 'Пиздец' } });
-    // Появилось облачко с текстом.
-    const list = document.querySelector('.gchat__list')!;
-    expect(within(list as HTMLElement).getByText('Пиздец')).toBeTruthy();
-    // Аватар-инициал автора.
-    expect(within(list as HTMLElement).getByText('О')).toBeTruthy();
-    // Список сбросился на плейсхолдер.
-    expect(select.value).toBe('');
+    fireEvent.click(screen.getByRole('button', { name: /Выберите сообщение/ }));
+    // Меню открылось — 3 опции.
+    const options = screen.getAllByRole('option');
+    expect(options.length).toBe(3);
+    fireEvent.click(screen.getByRole('option', { name: 'Пиздец' }));
+    // Облачко в ленте + аватар-инициал автора.
+    const list = document.querySelector('.gchat__list') as HTMLElement;
+    expect(within(list).getByText('Пиздец')).toBeTruthy();
+    expect(within(list).getByText('О')).toBeTruthy();
+    // Меню закрылось.
+    expect(screen.queryByRole('option')).toBeNull();
   });
 });

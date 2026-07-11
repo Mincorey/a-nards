@@ -51,15 +51,6 @@ export default function BotGame({ onNewGame }: Props) {
           active={blackActive} turnKey={g.rollId} seconds={20} note={botNote}
         />
         <div className="game__board">
-          <button
-            type="button"
-            className="game__finish"
-            onClick={() => guard.requestLeave.current?.('/')}
-            aria-label="Завершить игру"
-            title="Завершить игру"
-          >
-            <IconExit />
-          </button>
           <div className={'game__status' + (whiteActive ? ' is-you' : '') + (isOpening ? ' game__status--opening' : '')}>
             {g.phase === 'openingRoll' && g.openingDice ? (
               <div className="opening-roll">
@@ -95,6 +86,7 @@ export default function BotGame({ onNewGame }: Props) {
           avatarUrl={auth.profile?.avatar_url}
           active={whiteActive} turnKey={g.rollId} seconds={45} note={youNote}
           onSettings={() => setSettingsOpen(true)}
+          onFinish={() => guard.requestLeave.current?.('/')}
         />
 
         <button
@@ -105,6 +97,15 @@ export default function BotGame({ onNewGame }: Props) {
           title="Настройки игры"
         >
           <IconGear />
+        </button>
+        <button
+          type="button"
+          className="game__finish-mobile"
+          onClick={() => guard.requestLeave.current?.('/')}
+          aria-label="Завершить игру"
+          title="Завершить игру"
+        >
+          <IconExit />
         </button>
       </div>
 

@@ -1,13 +1,14 @@
 /* =============================================================================
  * GameChat.tsx — Окно чата под доской с ЗАРАНЕЕ ПОДГОТОВЛЕННЫМИ фразами.
- * Свободного ввода нет — игрок выбирает фразу из выпадающего списка «Выберите
- * сообщение…», и она появляется облачком в ленте. Лента вмещает последние
- * сообщения (по ширине доски), прокручивается, у каждого сообщения — маленький
- * аватар отправителя. Пока фразы отправляет только локальный игрок (тестовый
- * набор); онлайн-синхронизация сообщений между игроками — отдельный шаг.
+ * Свободного ввода нет — игрок выбирает фразу из КАСТОМНОГО выпадающего списка
+ * (стилизован под дизайн сайта, а не системный select), и она появляется
+ * облачком в ленте. Лента вмещает последние сообщения, прокручивается, у каждого
+ * сообщения — маленький аватар отправителя. Пока фразы отправляет только
+ * локальный игрок (тестовый набор); онлайн-синхронизация — отдельный шаг.
  * ========================================================================== */
 import { useEffect, useRef, useState } from 'react';
 import type { Color } from '../engine/types';
+import { IconChevron } from './icons';
 
 /** Тестовый набор готовых фраз. Позже вынесем/расширим. */
 const CHAT_PHRASES: string[] = [
@@ -36,8 +37,9 @@ export interface GameChatProps {
 
 export default function GameChat({ selfName, selfAvatarUrl, selfColor, className = '' }: GameChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [pick, setPick] = useState('');
+  const [open, setOpen] = useState(false);
   const listRef = useRef<HTMLDivElement | null>(null);
+  const pickerRef = useRef<HTMLDivElement | null>(null);
 
   // Автопрокрутка к последнему сообщению.
   useEffect(() => {
@@ -45,18 +47,27 @@ export default function GameChat({ selfName, selfAvatarUrl, selfColor, className
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages]);
 
+  // Закрытие меню по клику вне и по Escape.
+  useEffect(() => {
+    if (!open) return;
+    function onDown(e: MouseEvent) {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') setOpen(false); }
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
   function send(text: string) {
-    if (!text) return;
     setMessages((prev) => [
       ...prev,
       { id: ++msgSeq, text, name: selfName, avatarUrl: selfAvatarUrl, color: selfColor },
     ]);
-  }
-
-  function onSelect(e: React.ChangeEvent<HTMLSelectElement>) {
-    const text = e.target.value;
-    if (text) send(text);
-    setPick(''); // сбрасываем к плейсхолдеру
+    setOpen(false);
   }
 
   const initial = (n: string) => (n || '?').trim().slice(0, 1).toUpperCase();
@@ -77,12 +88,30 @@ export default function GameChat({ selfName, selfAvatarUrl, selfColor, className
           ))
         )}
       </div>
-      <select className="gchat__select" value={pick} onChange={onSelect} aria-label="Выберите сообщение">
-        <option value="">Выберите сообщение…</option>
-        {CHAT_PHRASES.map((p) => (
-          <option key={p} value={p}>{p}</option>
-        ))}
-      </select>
+
+      <div className={'gchat__picker' + (open ? ' is-open' : '')} ref={pickerRef}>
+        {open && (
+          <ul className="gchat__menu" role="listbox">
+            {CHAT_PHRASES.map((p) => (
+              <li key={p}>
+                <button type="button" className="gchat__option" role="option" aria-selected="false" onClick={() => send(p)}>
+                  {p}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <button
+          type="button"
+          className="gchat__trigger"
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
+        >
+          <span>Выберите сообщение…</span>
+          <IconChevron className="gchat__chevron" />
+        </button>
+      </div>
     </div>
   );
 }

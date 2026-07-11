@@ -84,6 +84,15 @@ export function IconPencil(props: IconProps) {
   );
 }
 
+/** Шеврон вниз — раскрытие выпадающего списка. */
+export function IconChevron(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  );
+}
+
 /** Выход из партии — дверь со стрелкой (строгий контур). */
 export function IconExit(props: IconProps) {
   return (
