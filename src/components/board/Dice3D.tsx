@@ -54,19 +54,31 @@ function Face({ value, transform }: { value: number; transform: string }) {
 
 /**
  * Один куб. `dir` (+1/-1) задаёт сторону кувырка, чтобы два кубика крутились
- * по-разному. Обороты копятся в `accRef`, поэтому каждый новый rollId даёт
- * полноценный кувырок и точное приземление на грань.
+ * по-разному. Обороты копятся в `accRef` (+2 за каждый НОВЫЙ бросок), поэтому
+ * каждый новый rollId даёт полноценный кувырок и точное приземление на грань.
  */
 function Cube({ value, rollId, dir, used }: { value: number; rollId: number; dir: 1 | -1; used: boolean }) {
   const rest = restRotation(value);
   const [rot, setRot] = useState(() => ({ ...rest }));
   const accRef = useRef(0);
+  // Какому rollId уже назначен кувырок. Нужен, чтобы accRef рос РОВНО на +2 за
+  // НОВЫЙ бросок и не удваивался при повторном прогоне эффекта. React.StrictMode
+  // в dev монтирует компонент дважды (mount→unmount→mount) и прогоняет этот
+  // эффект тоже дважды с одним и тем же rollId — раньше accRef накручивал +2
+  // ДВАЖДЫ (720°→1440°), setRot вызывался с двумя разными целями и CSS-переход
+  // перезапускался на полпути = ВИЗУАЛЬНО ДВОЙНАЯ АНИМАЦИЯ. Теперь при повторном
+  // прогоне того же rollId цель та же → второго перехода нет.
+  const lastRollRef = useRef<number | null>(null);
 
   useEffect(() => {
     const r = restRotation(value);
     if (prefersReducedMotion()) { setRot(r); return; }
-    accRef.current += 2; // +2 полных оборота на каждый бросок
-    const target = { rx: r.rx + dir * 360 * accRef.current, ry: r.ry - 360 * accRef.current };
+    if (lastRollRef.current !== rollId) {
+      lastRollRef.current = rollId;
+      accRef.current += 2; // +2 полных оборота на КАЖДЫЙ НОВЫЙ бросок
+    }
+    const spins = accRef.current; // одинаково при повторном прогоне того же rollId
+    const target = { rx: r.rx + dir * 360 * spins, ry: r.ry - 360 * spins };
     // ВАЖНО: применяем кувырок ЧЕРЕЗ два кадра, а не сразу. Кубики бота
     // монтируются внутри async-цепочки хода, и React 18 склеивал начальный
     // кадр (грань покоя) с этим setRot в один коммит — CSS-переход тогда не
