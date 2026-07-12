@@ -12,7 +12,8 @@ import { useAuth } from '../lib/auth';
 import { useOnline } from '../lib/presence';
 import { useOnlineGame } from '../hooks/useOnlineGame';
 import { useRegisterNavGuard, useNavGuardRef } from '../lib/navGuard';
-import { getTable, leaveTable, startGame, subscribeTable, fetchMyRating, createChatChannel, type TableFull } from '../lib/online';
+import { getTable, leaveTable, startGame, subscribeTable, fetchMyRating, createChatChannel, resignGame, claimTimeout, deleteTable, type TableFull } from '../lib/online';
+import { shouldClaimTimeout } from '../game/timeout';
 import { setInGame } from '../lib/music';
 import { getFriends, createInvite, type MiniProfile } from '../lib/friends';
 import { useGameChat } from '../game/chat';
@@ -66,7 +67,12 @@ export default function TablePage() {
 
   // Партия за столом идёт — переход по верхнему меню должен подтверждаться;
   // после подтверждения освобождаем место за столом, как и по кнопке «Выйти».
-  const leaveNow = useCallback(() => { void leaveTable(id); }, [id]);
+  const leaveNow = useCallback(() => {
+    // Уход из АКТИВНОЙ партии = сдача: соперник получает победу, затем место освобождается.
+    const gid = g.game && g.game.status === 'playing' ? g.game.id : null;
+    if (gid) void resignGame(gid).catch(() => { /* всё равно уходим */ });
+    void leaveTable(id);
+  }, [id, g.game]);
   useRegisterNavGuard(Boolean(g.game && g.game.status === 'playing'), leaveNow);
 
   // Рейтинг ДО партии — чтобы показать прирост после победы. Захватываем при
@@ -103,6 +109,22 @@ export default function TablePage() {
     return () => { alive = false; };
   }, [g.phase, g.game, myColor, ratingInfo]);
 
+  // Таймаут хода: если сейчас ход СОПЕРНИКА и он не ходит дольше лимита (пропал
+  // интернет / свернул игру) — засчитываем ему поражение через сервер (сервер
+  // сам проверит срок по updated_at). Таймер держит присутствующий игрок.
+  useEffect(() => {
+    const game = g.game;
+    if (!game || game.status !== 'playing' || !myColor || game.turn === myColor) return;
+    let cancelled = false;
+    const tick = () => {
+      if (cancelled) return;
+      if (shouldClaimTimeout(game, myColor)) claimTimeout(game.id).catch(() => { /* сервер отклонит, если рано */ });
+    };
+    const iv = window.setInterval(tick, 4000);
+    tick();
+    return () => { cancelled = true; window.clearInterval(iv); };
+  }, [g.game, myColor]);
+
   if (!auth.ready) return <section className="table"><div className="card"><p>Загрузка…</p></div></section>;
   if (!auth.user) {
     return (
@@ -124,7 +146,15 @@ export default function TablePage() {
     try { await startGame(id); } catch (e) { setError(e instanceof Error ? e.message : 'Не удалось начать'); }
     finally { setStarting(false); }
   }
-  async function doLeave() { setConfirmLeave(false); await leaveTable(id); nav('/lobby'); }
+  async function doLeave() {
+    setConfirmLeave(false);
+    try {
+      if (activeGame && g.game) await resignGame(g.game.id); // выход во время партии = сдача
+      else if (data && data.table.owner_id === auth.user?.id) await deleteTable(id); // владелец закрывает неначатый стол
+      await leaveTable(id);
+    } catch { /* всё равно уходим */ }
+    nav('/lobby');
+  }
   function onLeaveClick() {
     if (activeGame) setConfirmLeave(true);
     else void doLeave();
@@ -153,7 +183,7 @@ export default function TablePage() {
         name={s?.profile?.display_name ?? (s ? 'Игрок' : 'Свободно')}
         color={color}
         avatarUrl={s?.profile?.avatar_url}
-        active={isTurn} turnKey={g.rollId} seconds={60}
+        active={isTurn} turnKey={g.rollId} seconds={90}
         you={color === myColor}
         online={s?.user_id ? isOnline(s.user_id) : undefined}
         onSettings={color === myColor ? () => setSettingsOpen(true) : undefined}

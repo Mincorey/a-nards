@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import type { GameState, Color } from '../../engine/types';
 import {
-  VB, DIVIDER, COL_W, CHECKER_R, DICE_AREA,
-  ALL_POINTS, pointCell, checkerPos, barPos, offPos,
+  VB, DIVIDER, COL_W, CHECKER_R, DICE_AREA, MID_Y,
+  allPoints, pointCell, checkerPos, barPos, offPos, type PointGeom,
 } from './boardLayout';
 import Dice3D from './Dice3D';
 import { IconDice } from '../icons';
@@ -28,7 +28,8 @@ export interface BoardProps {
   /** Показать кнопку «Бросить» по центру доски (когда мой ход до броска). */
   canRoll?: boolean;
   onRoll?: () => void;
-  /** Цвет локального игрока — только чтобы анимировать чужие ходы медленнее. */
+  /** Цвет локального игрока: замедляет чужие ходы И ориентирует доску так, чтобы
+   *  СВОЙ дом (зона выноса) был в правой-нижней четверти. По умолчанию — белые. */
   myColor?: Color;
 }
 
@@ -53,13 +54,12 @@ function CountBadge({ cx, cy, n }: { cx: number; cy: number; n: number }) {
   );
 }
 
-function PointStack({ state, index, lift }: { state: GameState; index: number; lift: number }) {
-  const v = state.pts[index];
+function PointStack({ state, g, lift }: { state: GameState; g: PointGeom; lift: number }) {
+  const v = state.pts[g.index];
   if (v === 0) return null;
   const color: Color = v > 0 ? 'w' : 'b';
   const count = Math.abs(v) - lift; // вычитаем поднятую перетаскиванием/анимацией фишку
   if (count <= 0) return null;
-  const g = ALL_POINTS[index];
   const shown = Math.min(count, 6);
   const items = [];
   for (let k = 0; k < shown; k++) {
@@ -119,17 +119,19 @@ function parseKey(k: string): { color: Color; loc: Loc } {
   return { color: c as Color, loc: loc === 'bar' || loc === 'off' ? loc : Number(loc) };
 }
 
-function slotPos(loc: Loc, color: Color, countAtSlot: number): { cx: number; cy: number; r: number } {
+function slotPos(
+  loc: Loc, color: Color, countAtSlot: number, points: PointGeom[], viewer: Color,
+): { cx: number; cy: number; r: number } {
   if (loc === 'bar') {
-    const p = barPos(color, Math.max(countAtSlot - 1, 0));
+    const p = barPos(color, Math.max(countAtSlot - 1, 0), viewer);
     return { cx: p.cx, cy: p.cy, r: CHECKER_R * 0.85 };
   }
   if (loc === 'off') {
-    const p = offPos(color, Math.max(countAtSlot - 1, 0));
+    const p = offPos(color, Math.max(countAtSlot - 1, 0), viewer);
     return { cx: p.cx, cy: p.cy, r: p.r };
   }
   const shown = Math.min(countAtSlot, 6);
-  const p = checkerPos(ALL_POINTS[loc], Math.max(shown - 1, 0), Math.max(shown, 1));
+  const p = checkerPos(points[loc], Math.max(shown - 1, 0), Math.max(shown, 1));
   return { cx: p.cx, cy: p.cy, r: CHECKER_R };
 }
 
@@ -137,6 +139,9 @@ export default function Board({
   state, selected, sources, targets, onPick, rollId = 0, diceRemaining, canRoll, onRoll, myColor,
 }: BoardProps) {
   const interactive = Boolean(onPick);
+  const viewer: Color = myColor ?? 'w';
+  // Раскладка пунктов в перспективе игрока (свой дом — низ-право).
+  const points = useMemo(() => allPoints(viewer), [viewer]);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
@@ -182,8 +187,8 @@ export default function Board({
     if (plus.length === 1 && minus.length === 1 && plus[0].color === minus[0].color) {
       const src = minus[0];
       const dst = plus[0];
-      const from = slotPos(src.loc, src.color, before.get(src.key)!);
-      const to = slotPos(dst.loc, dst.color, after.get(dst.key)!);
+      const from = slotPos(src.loc, src.color, before.get(src.key)!, points, viewer);
+      const to = slotPos(dst.loc, dst.color, after.get(dst.key)!, points, viewer);
       const isMine = myColor != null && src.color === myColor;
       flightIdRef.current += 1;
       setFlight({
@@ -213,10 +218,10 @@ export default function Board({
       const victimSrc = minus.find((m) => m.color === victimColor);
       if (!moverSrc || !victimSrc) return;
 
-      const from = slotPos(moverSrc.loc, moverColor, before.get(moverSrc.key)!);
-      const to = slotPos(moverDst.loc, moverColor, after.get(moverDst.key)!);
-      const vFrom = slotPos(victimSrc.loc, victimColor, before.get(victimSrc.key)!);
-      const vTo = slotPos('bar', victimColor, after.get(victimBar.key)!);
+      const from = slotPos(moverSrc.loc, moverColor, before.get(moverSrc.key)!, points, viewer);
+      const to = slotPos(moverDst.loc, moverColor, after.get(moverDst.key)!, points, viewer);
+      const vFrom = slotPos(victimSrc.loc, victimColor, before.get(victimSrc.key)!, points, viewer);
+      const vTo = slotPos('bar', victimColor, after.get(victimBar.key)!, points, viewer);
       const isMine = myColor != null && moverColor === myColor;
       flightIdRef.current += 1;
       setFlight({
@@ -237,7 +242,7 @@ export default function Board({
       });
       return;
     }
-  }, [state, myColor]);
+  }, [state, myColor, points, viewer]);
 
   // Через пару кадров после монтирования «трогаем» transform → включается transition.
   useEffect(() => {
@@ -282,13 +287,13 @@ export default function Board({
   // Что под точкой: индекс пункта, 'divider' (перемычка) или null.
   const spotAt = useCallback((clientX: number, clientY: number): number | 'divider' | null => {
     const { x, y } = toVB(clientX, clientY);
-    for (const g of ALL_POINTS) {
+    for (const g of points) {
       const c = pointCell(g);
       if (x >= c.x && x <= c.x + c.w && y >= c.y && y <= c.y + c.h) return g.index;
     }
     if (x >= DIVIDER.x0 && x <= DIVIDER.x1 && y >= 120 && y <= VB.h - 120) return 'divider';
     return null;
-  }, [toVB]);
+  }, [toVB, points]);
 
   const resolveSource = useCallback((spot: number | 'divider' | null): (number | 'bar') | null => {
     if (typeof spot === 'number' && sources?.has(spot)) return spot;
@@ -372,14 +377,14 @@ export default function Board({
         <image href={BOARD_IMG} x="0" y="0" width={VB.w} height={VB.h} preserveAspectRatio="xMidYMid meet" />
 
         {/* Подсветка легальных источников */}
-        {interactive && ALL_POINTS.map((g) => {
+        {interactive && points.map((g) => {
           if (!sources?.has(g.index)) return null;
           const c = pointCell(g);
           return <rect key={'src' + g.index} x={c.x + 4} y={c.y} width={c.w - 8} height={c.h}
             rx={COL_W / 2} className="bd-hl bd-hl--source" />;
         })}
         {interactive && typeof selected === 'number' && (() => {
-          const c = pointCell(ALL_POINTS[selected]);
+          const c = pointCell(points[selected]);
           return <rect x={c.x + 4} y={c.y} width={c.w - 8} height={c.h} rx={COL_W / 2}
             className="bd-hl bd-hl--selected" />;
         })()}
@@ -392,27 +397,27 @@ export default function Board({
 
         {/* Фишки на пунктах */}
         <g filter="url(#bd-shadow)">
-          {ALL_POINTS.map((g) =>
-            <PointStack key={g.index} state={state} index={g.index}
+          {points.map((g) =>
+            <PointStack key={g.index} state={state} g={g}
               lift={(liftFrom === g.index ? 1 : 0) + (suppressPointIdx === g.index ? 1 : 0)} />)}
         </g>
 
         {/* Фишки на баре */}
         <g filter="url(#bd-shadow)">
-          {Array.from({ length: state.bar.w - liftBarW - (suppressBarColor === 'w' ? 1 : 0) }, (_, k) => { const p = barPos('w', k); return <Checker key={'bw' + k} cx={p.cx} cy={p.cy} color="w" r={CHECKER_R * 0.85} cls="bd-checker--enter" />; })}
-          {Array.from({ length: state.bar.b - liftBarB - (suppressBarColor === 'b' ? 1 : 0) }, (_, k) => { const p = barPos('b', k); return <Checker key={'bb' + k} cx={p.cx} cy={p.cy} color="b" r={CHECKER_R * 0.85} cls="bd-checker--enter" />; })}
+          {Array.from({ length: state.bar.w - liftBarW - (suppressBarColor === 'w' ? 1 : 0) }, (_, k) => { const p = barPos('w', k, viewer); return <Checker key={'bw' + k} cx={p.cx} cy={p.cy} color="w" r={CHECKER_R * 0.85} cls="bd-checker--enter" />; })}
+          {Array.from({ length: state.bar.b - liftBarB - (suppressBarColor === 'b' ? 1 : 0) }, (_, k) => { const p = barPos('b', k, viewer); return <Checker key={'bb' + k} cx={p.cx} cy={p.cy} color="b" r={CHECKER_R * 0.85} cls="bd-checker--enter" />; })}
         </g>
 
         {/* Вынесенные фишки — мини-стопка реальных фишек в трее выноса */}
         <g filter="url(#bd-shadow)">
-          {Array.from({ length: state.off.w - (suppressOffColor === 'w' ? 1 : 0) }, (_, k) => { const p = offPos('w', k); return <Checker key={'ow' + k} cx={p.cx} cy={p.cy} color="w" r={p.r} cls="bd-checker--enter" />; })}
-          {Array.from({ length: state.off.b - (suppressOffColor === 'b' ? 1 : 0) }, (_, k) => { const p = offPos('b', k); return <Checker key={'ob' + k} cx={p.cx} cy={p.cy} color="b" r={p.r} cls="bd-checker--enter" />; })}
-          {state.off.w > 0 && (() => { const p = offPos('w', state.off.w - 1); return <CountBadge key="ocw" cx={p.cx} cy={p.cy - p.r * 1.5} n={state.off.w} />; })()}
-          {state.off.b > 0 && (() => { const p = offPos('b', state.off.b - 1); return <CountBadge key="ocb" cx={p.cx} cy={p.cy + p.r * 1.5} n={state.off.b} />; })()}
+          {Array.from({ length: state.off.w - (suppressOffColor === 'w' ? 1 : 0) }, (_, k) => { const p = offPos('w', k, viewer); return <Checker key={'ow' + k} cx={p.cx} cy={p.cy} color="w" r={p.r} cls="bd-checker--enter" />; })}
+          {Array.from({ length: state.off.b - (suppressOffColor === 'b' ? 1 : 0) }, (_, k) => { const p = offPos('b', k, viewer); return <Checker key={'ob' + k} cx={p.cx} cy={p.cy} color="b" r={p.r} cls="bd-checker--enter" />; })}
+          {state.off.w > 0 && (() => { const p = offPos('w', state.off.w - 1, viewer); const sgn = p.cy > MID_Y ? -1 : 1; return <CountBadge key="ocw" cx={p.cx} cy={p.cy + sgn * p.r * 1.5} n={state.off.w} />; })()}
+          {state.off.b > 0 && (() => { const p = offPos('b', state.off.b - 1, viewer); const sgn = p.cy > MID_Y ? -1 : 1; return <CountBadge key="ocb" cx={p.cx} cy={p.cy + sgn * p.r * 1.5} n={state.off.b} />; })()}
         </g>
 
         {/* Маркеры целей */}
-        {interactive && ALL_POINTS.map((g) => {
+        {interactive && points.map((g) => {
           if (!targets?.has(g.index)) return null;
           const count = Math.abs(state.pts[g.index]);
           const pos = checkerPos(g, count, Math.max(count + 1, 1));

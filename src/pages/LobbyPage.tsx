@@ -82,6 +82,10 @@ export default function LobbyPage() {
     finally { setBusy(false); }
   }
 
+  // Показываем только столы, чей владелец сейчас в сети — брошенные (владелец
+  // ушёл, а стол завис в лобби) не показываем, чтобы никто не попал в мёртвую партию.
+  const visibleTables = tables.filter((t) => isOnline(t.owner_id));
+
   return (
     <section className="lobby">
       <Link className="btn btn--back" to="/">← На главную</Link>
@@ -97,8 +101,8 @@ export default function LobbyPage() {
 
       <div className="lobby__list">
         {loading ? <p>Загрузка столов…</p>
-          : tables.length === 0 ? <p className="lobby__empty">Открытых столов пока нет. Создайте свой!</p>
-          : tables.map((t) => {
+          : visibleTables.length === 0 ? <p className="lobby__empty">Открытых столов пока нет. Создайте свой!</p>
+          : visibleTables.map((t) => {
               const seatCount = t.seats?.[0]?.count ?? 0;
               const full = seatCount >= 2;
               return (

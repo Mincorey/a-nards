@@ -188,3 +188,16 @@ export function subscribeLobby(onChange: () => void) {
     .subscribe();
   return () => { void supabase.removeChannel(ch); };
 }
+
+/** Сдаться / выйти из партии во время игры — поражение вышедшему (edge resign). */
+export const resignGame = (game_id: string) =>
+  invoke<{ ok: boolean; winner: 'w' | 'b' | null }>('resign', { game_id });
+
+/** Засчитать сопернику таймаут хода (edge claim-timeout; сервер проверит 90с). */
+export const claimTimeout = (game_id: string) =>
+  invoke<{ ok: boolean; winner: 'w' | 'b' | null }>('claim-timeout', { game_id });
+
+/** Удалить стол (только владелец, по RLS). Каскад уберёт места и партии. */
+export async function deleteTable(id: string): Promise<void> {
+  await supabase.from('game_tables').delete().eq('id', id);
+}
