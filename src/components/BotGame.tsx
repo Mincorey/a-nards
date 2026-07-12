@@ -7,10 +7,10 @@
  * про ход человека — над его аватаром, про соперника — над аватаром бота.
  * ========================================================================== */
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Board from './board/Board';
 import DieFace from './board/DieFace';
 import PlayerPanel from './PlayerPanel';
-import Modal from './Modal';
 import GameSettingsModal from './GameSettingsModal';
 import GameChat from './GameChat';
 import ChatPickerModal from './ChatPickerModal';
@@ -19,6 +19,8 @@ import { useNavGuardRef } from '../lib/navGuard';
 import { useGameChat } from '../game/chat';
 import { useAuth } from '../lib/auth';
 import { useBotGameSession } from '../game/BotGameSession';
+import { setInGame } from '../lib/music';
+import GameOverModal from './GameOverModal';
 
 interface Props {
   onNewGame: () => void;
@@ -26,6 +28,7 @@ interface Props {
 
 export default function BotGame({ onNewGame }: Props) {
   const auth = useAuth();
+  const nav = useNavigate();
   const guard = useNavGuardRef();
   const { game: g, paused } = useBotGameSession();
   const targetSet = useMemo(() => new Set(g.targets.map((m) => m.to)), [g.targets]);
@@ -42,6 +45,12 @@ export default function BotGame({ onNewGame }: Props) {
   useEffect(() => {
     if (g.phase !== 'gameover') setOverDismissed(false);
   }, [g.phase]);
+
+  // Фоновая музыка играет, пока мы на игровом экране (и включена в настройках).
+  useEffect(() => {
+    setInGame(true);
+    return () => setInGame(false);
+  }, []);
 
   const whiteActive = g.phase === 'humanRoll' || g.phase === 'humanMove';
   const blackActive = g.phase === 'botTurn';
@@ -124,14 +133,14 @@ export default function BotGame({ onNewGame }: Props) {
       {chatOpen && <ChatPickerModal onPick={chat.send} onClose={() => setChatOpen(false)} />}
 
       {g.phase === 'gameover' && !overDismissed && (
-        <Modal onClose={() => setOverDismissed(true)}>
-          <h2>{g.winner === 'w' ? 'Победа!' : 'Поражение'}</h2>
-          <p>{g.winner === 'w' ? 'Вы вынесли все шашки первыми.' : 'Бот вынес все шашки первым.'}</p>
-          <div className="profile__actions">
-            <button className="btn btn--primary" onClick={g.reset}>Сыграть ещё</button>
-            <button className="btn" onClick={onNewGame}>Изменить настройки</button>
-          </div>
-        </Modal>
+        <GameOverModal
+          won={g.winner === 'w'}
+          subtitle={g.winner === 'w' ? 'Вы вынесли все шашки первыми.' : 'Бот вынес все шашки первым.'}
+          onAgain={g.reset}
+          extra={{ label: 'Изменить настройки', onClick: onNewGame }}
+          onLobby={() => nav('/')}
+          onClose={() => setOverDismissed(true)}
+        />
       )}
     </>
   );

@@ -5,6 +5,7 @@
 import { supabase } from './supabase';
 import type { GameRow, GameTable, TableSeat, Variant, Visibility } from './online.types';
 import type { Move } from '../engine/types';
+import type { ChatTransport, WireMessage } from '../game/chat';
 
 export interface TableListItem extends GameTable {
   owner: { display_name: string; username: string } | null;
@@ -97,6 +98,15 @@ export async function setReady(id: string, ready: boolean): Promise<void> {
   await supabase.from('table_seats').update({ is_ready: ready }).eq('table_id', id).eq('user_id', uid);
 }
 
+/** Текущий рейтинг авторизованного игрока (для показа прироста после победы). */
+export async function fetchMyRating(): Promise<number | null> {
+  const { data: u } = await supabase.auth.getUser();
+  const uid = u.user?.id;
+  if (!uid) return null;
+  const { data } = await supabase.from('profiles').select('rating').eq('id', uid).maybeSingle();
+  return (data?.rating as number | undefined) ?? null;
+}
+
 export async function getActiveGame(tableId: string): Promise<GameRow | null> {
   const { data } = await supabase.from('games')
     .select('*').eq('table_id', tableId).order('started_at', { ascending: false }).limit(1).maybeSingle();
@@ -137,6 +147,37 @@ export function subscribeTable(
       (payload) => handlers.onGame?.(payload.new as GameRow))
     .subscribe();
   return () => { void supabase.removeChannel(ch); };
+}
+
+/**
+ * Онлайн-чат стола поверх Supabase Realtime broadcast. Фразы НЕ пишутся в БД
+ * (эфемерные) — рассылаются подписчикам канала. self:false, поэтому отправитель
+ * не получает собственное сообщение обратно (своё он уже показал локально).
+ * Канал создаётся лениво при первой подписке и закрывается при отписке.
+ */
+export function createChatChannel(tableId: string): ChatTransport {
+  let ch: ReturnType<typeof supabase.channel> | null = null;
+  let handler: ((m: WireMessage) => void) | null = null;
+
+  const ensure = () => {
+    if (ch) return ch;
+    ch = supabase.channel(`chat:${tableId}`, { config: { broadcast: { self: false } } });
+    ch.on('broadcast', { event: 'msg' }, (p: { payload: WireMessage }) => handler?.(p.payload));
+    ch.subscribe();
+    return ch;
+  };
+
+  return {
+    send: (m) => { void ensure().send({ type: 'broadcast', event: 'msg', payload: m }); },
+    subscribe: (cb) => {
+      handler = cb;
+      ensure();
+      return () => {
+        handler = null;
+        if (ch) { void supabase.removeChannel(ch); ch = null; }
+      };
+    },
+  };
 }
 
 /** Подписка на список открытых столов (любые изменения game_tables). */

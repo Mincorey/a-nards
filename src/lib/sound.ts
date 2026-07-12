@@ -26,3 +26,23 @@ export function playDiceRoll(): void {
     /* воспроизведение звука не критично */
   }
 }
+
+let victoryAudio: HTMLAudioElement | null = null;
+
+/**
+ * Проигрывает звук победы (public/sound/victory.mp3) — один раз при выигрыше
+ * пользователя (показ модалки победы). Не привязан к тумблеру звука костей.
+ */
+export function playVictory(): void {
+  if (typeof window === 'undefined' || typeof Audio === 'undefined') return;
+  try {
+    if (!victoryAudio) {
+      victoryAudio = new Audio('/sound/victory.mp3');
+      victoryAudio.preload = 'auto';
+    }
+    victoryAudio.currentTime = 0;
+    void victoryAudio.play().catch(() => { /* автоплей до первого жеста / нет звука */ });
+  } catch {
+    /* воспроизведение звука не критично */
+  }
+}

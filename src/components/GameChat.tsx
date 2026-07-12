@@ -4,7 +4,8 @@
  * потому что в мобильном ландшафте те же сообщения показываются иначе
  * (иконка → модалка → облачко под аватаром), а источник данных общий.
  * Свободного ввода нет — фраза выбирается из КАСТОМНОГО выпадающего списка
- * (стилизован под сайт, не системный select).
+ * (стилизован под сайт, не системный select). Свои сообщения выравниваются
+ * справа (own), сообщения оппонента — слева.
  * ========================================================================== */
 import { useEffect, useRef, useState } from 'react';
 import { CHAT_PHRASES, type ChatMessage } from '../game/chat';
@@ -56,7 +57,7 @@ export default function GameChat({ messages, onSend, className = '' }: GameChatP
           <p className="gchat__empty">Сообщений пока нет. Выберите фразу ниже.</p>
         ) : (
           messages.map((m) => (
-            <div key={m.id} className="gchat__msg gchat__msg--self">
+            <div key={m.id} className={'gchat__msg' + (m.own ? ' gchat__msg--self' : '')}>
               <span className={'gchat__ava gchat__ava--' + m.color}>
                 {m.avatarUrl ? <img src={m.avatarUrl} alt="" /> : <span>{initial(m.name)}</span>}
               </span>

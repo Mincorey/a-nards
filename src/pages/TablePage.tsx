@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Board from '../components/board/Board';
 import PlayerPanel from '../components/PlayerPanel';
-import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
 import GameSettingsModal from '../components/GameSettingsModal';
+import GameOverModal from '../components/GameOverModal';
 import GameChat from '../components/GameChat';
 import ChatPickerModal from '../components/ChatPickerModal';
 import { IconGear, IconExit } from '../components/icons';
@@ -12,7 +12,8 @@ import { useAuth } from '../lib/auth';
 import { useOnline } from '../lib/presence';
 import { useOnlineGame } from '../hooks/useOnlineGame';
 import { useRegisterNavGuard, useNavGuardRef } from '../lib/navGuard';
-import { getTable, leaveTable, startGame, subscribeTable, type TableFull } from '../lib/online';
+import { getTable, leaveTable, startGame, subscribeTable, fetchMyRating, createChatChannel, type TableFull } from '../lib/online';
+import { setInGame } from '../lib/music';
 import { getFriends, createInvite, type MiniProfile } from '../lib/friends';
 import { useGameChat } from '../game/chat';
 import type { Color } from '../engine/types';
@@ -54,7 +55,12 @@ export default function TablePage() {
 
   const selfName = mySeat?.profile?.display_name ?? 'Вы';
   const selfAvatar = mySeat?.profile?.avatar_url ?? null;
-  const chat = useGameChat({ name: selfName, avatarUrl: selfAvatar, color: (myColor ?? 'w') as Color });
+  // Онлайн-транспорт чата (Supabase broadcast) — один на стол, пока мы за ним.
+  const chatTransport = useMemo(
+    () => (id && auth.user ? createChatChannel(id) : undefined),
+    [id, auth.user],
+  );
+  const chat = useGameChat({ name: selfName, avatarUrl: selfAvatar, color: (myColor ?? 'w') as Color }, chatTransport);
 
   useEffect(() => { if (g.phase !== 'gameover') setOverDismissed(false); }, [g.phase]);
 
@@ -62,6 +68,40 @@ export default function TablePage() {
   // после подтверждения освобождаем место за столом, как и по кнопке «Выйти».
   const leaveNow = useCallback(() => { void leaveTable(id); }, [id]);
   useRegisterNavGuard(Boolean(g.game && g.game.status === 'playing'), leaveNow);
+
+  // Рейтинг ДО партии — чтобы показать прирост после победы. Захватываем при
+  // старте КАЖДОЙ новой партии (по её id) и сбрасываем прошлый результат.
+  const ratingBeforeRef = useRef<number | null>(null);
+  const capturedGameRef = useRef<string | null>(null);
+  const [ratingInfo, setRatingInfo] = useState<{ after: number; delta: number } | null>(null);
+  useEffect(() => {
+    const gid = g.game && g.game.status === 'playing' ? g.game.id : null;
+    if (gid && capturedGameRef.current !== gid) {
+      capturedGameRef.current = gid;
+      ratingBeforeRef.current = mySeat?.profile?.rating ?? null;
+      setRatingInfo(null);
+    }
+  }, [g.game, mySeat]);
+
+  // Фоновая музыка играет, пока идёт партия за столом (и включена в настройках).
+  useEffect(() => {
+    const playing = Boolean(g.game && g.game.status === 'playing');
+    setInGame(playing);
+    return () => setInGame(false);
+  }, [g.game]);
+
+  // Победа онлайн — подтягиваем обновлённый рейтинг (finalize_game уже применил
+  // Elo на сервере) и считаем прирост относительно захваченного «до».
+  useEffect(() => {
+    if (g.phase !== 'gameover' || g.game?.winner !== myColor) return;
+    if (ratingBeforeRef.current == null || ratingInfo) return;
+    let alive = true;
+    fetchMyRating().then((after) => {
+      if (!alive || after == null) return;
+      setRatingInfo({ after, delta: after - (ratingBeforeRef.current ?? after) });
+    }).catch(() => { /* рейтинг не критичен для показа модалки */ });
+    return () => { alive = false; };
+  }, [g.phase, g.game, myColor, ratingInfo]);
 
   if (!auth.ready) return <section className="table"><div className="card"><p>Загрузка…</p></div></section>;
   if (!auth.user) {
@@ -119,7 +159,7 @@ export default function TablePage() {
         onSettings={color === myColor ? () => setSettingsOpen(true) : undefined}
         onFinish={color === myColor && activeGame ? () => guard.requestLeave.current?.('/') : undefined}
         onChat={color === myColor && activeGame ? () => setChatOpen(true) : undefined}
-        chatBubble={color === myColor ? chat.lastSelf : null}
+        chatBubble={color === myColor ? chat.lastSelf : chat.lastOpponent}
       />
     );
   }
@@ -225,14 +265,14 @@ export default function TablePage() {
       {chatOpen && <ChatPickerModal onPick={chat.send} onClose={() => setChatOpen(false)} />}
 
       {g.phase === 'gameover' && !overDismissed && (
-        <Modal onClose={() => setOverDismissed(true)}>
-          <h2>{g.game?.winner === myColor ? 'Победа!' : 'Партия завершена'}</h2>
-          <p>{g.game?.winner === myColor ? 'Вы вынесли все шашки первыми.' : 'Соперник вынес все шашки первым.'}</p>
-          <div className="profile__actions">
-            <button className="btn btn--primary" onClick={onStart} disabled={starting}>Сыграть ещё</button>
-            <button className="btn" onClick={() => nav('/lobby')}>В лобби</button>
-          </div>
-        </Modal>
+        <GameOverModal
+          won={g.game?.winner === myColor}
+          subtitle={g.game?.winner === myColor ? 'Вы вынесли все шашки первыми.' : 'Соперник вынес все шашки первым.'}
+          rating={ratingInfo}
+          onAgain={onStart}
+          onLobby={() => nav('/')}
+          onClose={() => setOverDismissed(true)}
+        />
       )}
 
       <ConfirmModal

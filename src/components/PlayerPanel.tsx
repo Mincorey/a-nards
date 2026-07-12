@@ -31,7 +31,7 @@ export interface PlayerPanelProps {
    *  видна только в мобильном ландшафте (см. CSS). */
   onChat?: () => void;
   /** Последнее отправленное сообщение — всплывает облачком под аватаром (ландшафт). */
-  chatBubble?: { id: number; text: string } | null;
+  chatBubble?: { id: string | number; text: string } | null;
   className?: string;
 }
 

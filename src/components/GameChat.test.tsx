@@ -2,34 +2,34 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, within, cleanup } from '@testing-library/react';
 import GameChat from './GameChat';
-import type { ChatMessage } from '../game/chat';
+import { CHAT_PHRASES, type ChatMessage } from '../game/chat';
 
 describe('GameChat — окно чата под доской (управляемое)', () => {
   afterEach(cleanup);
 
-  it('рендерит облачка из messages с аватаром-инициалом', () => {
+  it('своё сообщение выравнивается вправо, чужое — влево', () => {
     const messages: ChatMessage[] = [
-      { id: 1, text: 'Пиздец', name: 'Олег', color: 'w' },
+      { id: '1', text: 'Хорош Брух 👌', name: 'Олег', color: 'w', own: true },
+      { id: '2', text: 'Да ну нах.', name: 'Гость', color: 'b', own: false },
     ];
-    render(<GameChat messages={messages} onSend={() => {}} />);
-    const list = document.querySelector('.gchat__list') as HTMLElement;
-    expect(within(list).getByText('Пиздец')).toBeTruthy();
-    expect(within(list).getByText('О')).toBeTruthy();
+    const { container } = render(<GameChat messages={messages} onSend={() => {}} />);
+    const list = container.querySelector('.gchat__list') as HTMLElement;
+    expect(within(list).getByText('Хорош Брух 👌')).toBeTruthy();
+    const rows = list.querySelectorAll('.gchat__msg');
+    expect(rows[0].classList.contains('gchat__msg--self')).toBe(true);   // своё
+    expect(rows[1].classList.contains('gchat__msg--self')).toBe(false);  // чужое
   });
 
   it('пустое состояние + выбор фразы вызывает onSend', () => {
     const onSend = vi.fn();
     render(<GameChat messages={[]} onSend={onSend} />);
     expect(screen.getByText(/Сообщений пока нет/)).toBeTruthy();
-    // Меню закрыто.
     expect(screen.queryByRole('option')).toBeNull();
-    // Открыть и выбрать.
     fireEvent.click(screen.getByRole('button', { name: /Выберите сообщение/ }));
     const options = screen.getAllByRole('option');
-    expect(options.length).toBe(3);
-    fireEvent.click(screen.getByRole('option', { name: 'Вот бля...' }));
-    expect(onSend).toHaveBeenCalledWith('Вот бля...');
-    // Меню закрылось.
+    expect(options.length).toBe(CHAT_PHRASES.length);
+    fireEvent.click(screen.getByRole('option', { name: 'Хорош Брух 👌' }));
+    expect(onSend).toHaveBeenCalledWith('Хорош Брух 👌');
     expect(screen.queryByRole('option')).toBeNull();
   });
 });
