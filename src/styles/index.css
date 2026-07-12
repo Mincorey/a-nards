@@ -1364,3 +1364,57 @@ body::after {
 .gover__rating-delta { font-size: 1rem; font-weight: 700; color: #7fd18a; }
 .gover__actions { display: flex; gap: 0.6rem; justify-content: center; flex-wrap: wrap; }
 .gover__actions .btn { min-width: 120px; }
+
+/* =========================================================================
+   Красивый скролл в списке фраз чата (выпадающий список + модалка выбора).
+   Золото/дерево под дизайн сайта. WebKit (Chrome/Safari) + Firefox. */
+.gchat__menu::-webkit-scrollbar,
+.chatpick__list::-webkit-scrollbar { width: 10px; }
+.gchat__menu::-webkit-scrollbar-track,
+.chatpick__list::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.28);
+  border-radius: 8px; margin: 6px 0;
+}
+.gchat__menu::-webkit-scrollbar-thumb,
+.chatpick__list::-webkit-scrollbar-thumb {
+  border-radius: 8px;
+  background: linear-gradient(180deg, var(--wood-light), var(--accent));
+  border: 2px solid rgba(26, 16, 8, 0.65); /* «отступ» вокруг ползунка */
+  background-clip: padding-box;
+}
+.gchat__menu::-webkit-scrollbar-thumb:hover,
+.chatpick__list::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #e6c88c, #c9963a);
+  background-clip: padding-box;
+}
+/* Firefox */
+.gchat__menu,
+.chatpick__list {
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent) rgba(0, 0, 0, 0.28);
+}
+
+/* =========================================================================
+   ГЛОБАЛЬНЫЙ красивый скролл — везде на сайте и в игре, где появляется
+   прокрутка. Золото/дерево под дизайн. WebKit (Chrome/Safari/Edge) + Firefox.
+   (Специальные правила для списков фраз выше совпадают по стилю и остаются.) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent) rgba(0, 0, 0, 0.28);
+}
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.28);
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  border-radius: 8px;
+  background: linear-gradient(180deg, var(--wood-light), var(--accent));
+  border: 2px solid rgba(26, 16, 8, 0.55); /* «отступ» вокруг ползунка */
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #e6c88c, #c9963a);
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-corner { background: transparent; }
