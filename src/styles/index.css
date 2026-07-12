@@ -1288,3 +1288,52 @@ body::after {
     animation: pp-note-in 0.2s ease both;
   }
 }
+
+/* =========================================================================
+   Форма «Контакты» (ContactsPage). Тёмный стиль сайта, кастомный дропдаун,
+   адаптив (десктоп/мобилка). Honeypot скрыт, но доступен ботам. */
+.cform { display: flex; flex-direction: column; gap: 0.85rem; margin: 1.1rem 0 0.4rem; text-align: left; }
+.cform__textarea {
+  padding: 0.6rem 0.7rem; border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06); color: var(--text);
+  font-size: 1rem; line-height: 1.5; resize: vertical; min-height: 120px;
+}
+.cform__textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.cform__counter { align-self: flex-end; font-size: 0.75rem; opacity: 0.55; }
+
+/* Кастомный выпадающий список темы (как в чате, но открывается вниз). */
+.cform__picker { position: relative; }
+.cform__trigger {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+  padding: 0.6rem 0.7rem; min-height: 44px; border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06); color: var(--text);
+  font-size: 1rem; text-align: left; cursor: pointer;
+}
+.cform__trigger:hover { border-color: rgba(216, 184, 120, 0.75); }
+.cform__picker.is-open .cform__trigger { border-color: var(--accent); }
+.cform__placeholder { opacity: 0.55; }
+.cform__chevron { font-size: 1.1rem; color: var(--wood-light); transition: transform 0.2s ease; flex: 0 0 auto; }
+.cform__picker.is-open .cform__chevron { transform: rotate(180deg); }
+.cform__menu {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 30;
+  margin: 0; padding: 0.3rem; list-style: none;
+  background: #241710; border: 1px solid rgba(216, 184, 120, 0.35);
+  border-radius: 10px; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+  max-height: 260px; overflow-y: auto;
+}
+.cform__menu li { margin: 0; }
+.cform__option {
+  width: 100%; text-align: left; padding: 0.55rem 0.6rem; border: none; border-radius: 7px;
+  background: none; color: var(--text); font-size: 0.95rem; cursor: pointer;
+}
+.cform__option:hover, .cform__option:focus-visible { background: var(--accent); color: var(--text-dark); outline: none; }
+.cform__option.is-sel { color: var(--accent); font-weight: 700; }
+.cform__option.is-sel:hover { color: var(--text-dark); }
+
+.cform__done { display: flex; flex-direction: column; gap: 0.8rem; align-items: flex-start; margin: 1.1rem 0 0.4rem; }
+.cform__admin { margin-top: 1.2rem; opacity: 0.85; }
+
+/* Honeypot — визуально скрыт, но существует в DOM для ботов. */
+.cform__hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
