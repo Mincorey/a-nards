@@ -180,6 +180,45 @@ export function createChatChannel(tableId: string): ChatTransport {
   };
 }
 
+/**
+ * Быстрая синхронизация состояния партии поверх Supabase Realtime broadcast.
+ * После своего успешного хода/броска игрок рассылает новую строку партии
+ * сопернику — тот применяет её почти мгновенно (<100 мс), не дожидаясь
+ * postgres_changes (репликация WAL медленнее). postgres_changes при этом
+ * ОСТАЁТСЯ как надёжный запасной канал сверки: дубликат отсеивается по
+ * updated_at на приёмнике. self:false — своё сообщение обратно не приходит
+ * (у отправителя уже есть авторитетное состояние от Edge Function).
+ */
+export interface GameSyncTransport {
+  send: (row: GameRow) => void;
+  subscribe: (cb: (row: GameRow) => void) => () => void;
+}
+
+export function createGameSync(tableId: string): GameSyncTransport {
+  let ch: ReturnType<typeof supabase.channel> | null = null;
+  let handler: ((row: GameRow) => void) | null = null;
+
+  const ensure = () => {
+    if (ch) return ch;
+    ch = supabase.channel(`table:${tableId}:sync`, { config: { broadcast: { self: false } } });
+    ch.on('broadcast', { event: 'game' }, (p: { payload: GameRow }) => handler?.(p.payload));
+    ch.subscribe();
+    return ch;
+  };
+
+  return {
+    send: (row) => { void ensure().send({ type: 'broadcast', event: 'game', payload: row }); },
+    subscribe: (cb) => {
+      handler = cb;
+      ensure();
+      return () => {
+        handler = null;
+        if (ch) { void supabase.removeChannel(ch); ch = null; }
+      };
+    },
+  };
+}
+
 /** Подписка на список открытых столов (любые изменения game_tables). */
 export function subscribeLobby(onChange: () => void) {
   const ch = supabase
