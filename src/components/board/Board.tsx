@@ -389,11 +389,21 @@ export default function Board({
             className="bd-hl bd-hl--selected" />;
         })()}
 
-        {/* Зона выноса (подсветка цели) */}
-        {interactive && targets?.has('off') && (
-          <rect x={DIVIDER.x0 + 4} y={120} width={DIVIDER.x1 - DIVIDER.x0 - 8} height={VB.h - 240}
-            rx="14" className="bd-tray is-target" />
-        )}
+        {/* Зона выноса (подсветка цели) — ТОЛЬКО в своей половине доски, где лоток
+            выноса текущего игрока. Раньше зелёная полоса рисовалась на всю высоту
+            перемычки и подсвечивала ещё и противоположную половину (у лотка
+            соперника) — при сбросе это выглядело как «фантомный» второй вынос с
+            другой стороны доски и путало игрока. */}
+        {interactive && targets?.has('off') && (() => {
+          const off0 = offPos(state.turn, 0, viewer);
+          const bottom = off0.cy > MID_Y;      // низ ли доски лоток текущего игрока
+          const y = bottom ? MID_Y + 8 : 120;
+          const height = bottom ? (VB.h - 120) - (MID_Y + 8) : (MID_Y - 8) - 120;
+          return (
+            <rect x={DIVIDER.x0 + 4} y={y} width={DIVIDER.x1 - DIVIDER.x0 - 8} height={height}
+              rx="14" className="bd-tray is-target" />
+          );
+        })()}
 
         {/* Фишки на пунктах */}
         <g filter="url(#bd-shadow)">
