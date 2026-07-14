@@ -11,7 +11,8 @@ import { pauseMusic } from '../lib/music';
 
 export interface GameOverModalProps {
   won: boolean;
-  subtitle: string;
+  /** Подзаголовок больше не показывается (по требованию), оставлен опциональным для совместимости. */
+  subtitle?: string;
   /** Онлайн: изменение рейтинга (после победы). Для игры с ботом — null. */
   rating?: { after: number; delta: number } | null;
   onLobby: () => void;
@@ -48,7 +49,7 @@ function Trophy() {
 }
 
 export default function GameOverModal({
-  won, subtitle, rating, onLobby, onAgain, againLabel = 'Сыграть ещё', extra, onClose,
+  won, rating, onLobby, onAgain, againLabel = 'Сыграть ещё', extra, onClose,
 }: GameOverModalProps) {
   // Один раз при показе модалки победы: звук победы + пауза фоновой музыки.
   useEffect(() => {
@@ -59,7 +60,6 @@ export default function GameOverModal({
     <Modal className={'gover' + (won ? ' gover--win' : '')} onClose={onClose}>
       {won && <Trophy />}
       <h2 className="gover__title">{won ? 'Победа!' : 'Партия завершена'}</h2>
-      <p className="gover__subtitle">{subtitle}</p>
 
       {won && rating && (
         <div className="gover__rating">

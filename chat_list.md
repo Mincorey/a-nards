@@ -1946,3 +1946,35 @@ edge-функции компилируются и ACTIVE. Рекомендаци
 — mount не даёт их удалить из песочницы. Удалить вручную:
 `Remove-Item "public\_orient_w.png","public\_orient_b.png" -Force`.
 Правки на mount — только `cat >`/`cp`/python (Edit рвёт файлы; в этой сессии подтвердилось снова).
+
+---
+
+## Сессия 2026-07-14 — Подготовка миграции БД в Франкфурт
+
+**Задача:** перенести БД Supabase из Сингапура (ap-southeast-1, проект `wiwfzmwzkjmluhnrrcnh`) во Франкфурт (eu-central-1, новый проект `gmpvcrsmkxpjkjrvuyng` на отдельном аккаунте apsny.nards@proton.me) для снижения задержки.
+
+**Выяснено:**
+- Регион существующего проекта сменить нельзя → новый проект + перенос.
+- Новый проект уже создан на др. аккаунте/орг → слот free-тарифа освобождать не нужно.
+- Схема: миграции 0001–0014 (не 0015), совпадают с применёнными в БД.
+- Данные: profiles(8), friendships(2), contact_messages(1), остальные пусты. Auth: 9 юзеров. Storage: бакет avatars + 2 файла.
+- Секреты edge-функций для ручного переноса: TELEGRAM_BOT_TOKEN, TELEGRAM_ADMIN_CHAT_ID, ALLOWED_ORIGINS.
+
+**Сделано (пока доступ только к старой БД):**
+- Снят полный дамп данных с хэшами паролей → `_migration_fr/data_dump.sql` (9 users + 9 identities + 9 profiles + 2 friendships + 1 contact).
+- Подготовлен `_migration_fr/NEW_env.local.txt` (новые VITE-переменные).
+- `_migration_fr/` добавлен в .gitignore.
+- Обновлён `MIGRATION_FRANKFURT.md` (актуальный план с отметками).
+
+**Дальше (когда подключат доступ к новой БД):** прогнать миграции 0001–0014 → применить data_dump.sql → деплой 6 edge-функций + секреты → аватары → Auth Site/Redirect URL → Vercel env + Redeploy → тесты → удалить старый проект.
+
+### Перенос БД выполнен + замер пинга (2026-07-14, продолжение)
+- Новый проект gmpvcrsmkxpjkjrvuyng, регион eu-central-1 (Франкфурт) — подтверждён.
+- Прогнаны миграции 0001-0014 + добавлена 0015_restore_supabase_grants (management-API не выдал стандартные гранты anon/authenticated → чинили, иначе "permission denied").
+- Залиты данные с паролями: 9 users/identities/profiles, 2 friendships, 1 contact. FK-целостность 0 сирот, рейтинги сохранены. RLS-тест пройден.
+- Пинг из Абхазии (TCP до пула, тест с ПК пользователя): Франкфурт min 74 / avg 109 мс; Сингапур min 230 / avg 255 мс. Выигрыш ~156 мс. Полный REST-запрос: FR ~0.67с медиана vs SG ~1.13с.
+- ОСТАЛОСЬ: деплой 6 edge-функций + секреты (TELEGRAM_BOT_TOKEN, TELEGRAM_ADMIN_CHAT_ID, ALLOWED_ORIGINS); Auth Site/Redirect URL; Vercel env + Redeploy; локальные .env.local/Supabase.txt; перезалить 2 аватара; тесты; пауза/удаление старого проекта.
+
+### Edge Functions перенесены (2026-07-14)
+- Все 6 функций задеплоены в gmpvcrsmkxpjkjrvuyng, статус ACTIVE, verify_jwt=on. Структура: <fn>/index.ts + _shared/* (сохранены относительные импорты ../_shared/). Пилот send-contact сверен байт-в-байт по коду.
+- Осталось вручную: секреты edge-функций (TELEGRAM_BOT_TOKEN, TELEGRAM_ADMIN_CHAT_ID, ALLOWED_ORIGINS); Auth Site/Redirect URL; Vercel env + Redeploy; аватары; финальные тесты.

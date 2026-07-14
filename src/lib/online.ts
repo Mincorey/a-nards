@@ -19,13 +19,14 @@ export async function listOpenTables(): Promise<TableListItem[]> {
     .select('*, owner:profiles!owner_id(display_name, username), seats:table_seats(count)')
     .eq('status', 'waiting')
     .eq('visibility', 'public')
+    .eq('quick', false)
     .order('created_at', { ascending: false })
     .limit(50);
   if (error) throw error;
   return (data ?? []) as unknown as TableListItem[];
 }
 
-export interface CreateTableInput { name: string; variant: Variant; visibility: Visibility; }
+export interface CreateTableInput { name: string; variant: Variant; visibility: Visibility; quick?: boolean; }
 
 /** Создать стол и сесть владельцем (место 0, белые). */
 export async function createTable(input: CreateTableInput): Promise<GameTable> {
@@ -35,7 +36,7 @@ export async function createTable(input: CreateTableInput): Promise<GameTable> {
 
   const { data: table, error } = await supabase
     .from('game_tables')
-    .insert({ owner_id: uid, name: input.name, variant: input.variant, visibility: input.visibility })
+    .insert({ owner_id: uid, name: input.name, variant: input.variant, visibility: input.visibility, quick: input.quick ?? false })
     .select().single();
   if (error) throw error;
 
@@ -44,6 +45,27 @@ export async function createTable(input: CreateTableInput): Promise<GameTable> {
   if (seatErr) throw seatErr;
 
   return table as GameTable;
+}
+
+/**
+ * Кандидаты для быстрого подбора: открытые БЫСТРЫЕ столы нужного варианта, где
+ * сидит ровно один игрок (хозяин ждёт соперника) и это не мы. Отсортированы по
+ * времени создания (сначала самые «старые» ожидающие — их и подхватываем).
+ * Проверку присутствия хозяина (online) делает вызывающий компонент.
+ */
+export async function findQuickCandidates(variant: Variant): Promise<{ id: string; owner_id: string }[]> {
+  const { data: u } = await supabase.auth.getUser();
+  const uid = u.user?.id ?? null;
+  const { data, error } = await supabase
+    .from('game_tables')
+    .select('id, owner_id, seats:table_seats(count)')
+    .eq('status', 'waiting').eq('quick', true).eq('variant', variant)
+    .order('created_at', { ascending: true }).limit(20);
+  if (error) throw error;
+  return (data ?? [])
+    .filter((t) => (t as { owner_id: string }).owner_id !== uid
+      && (((t as { seats?: { count: number }[] }).seats?.[0]?.count ?? 0) === 1))
+    .map((t) => ({ id: (t as { id: string }).id, owner_id: (t as { owner_id: string }).owner_id }));
 }
 
 export interface TableFull {

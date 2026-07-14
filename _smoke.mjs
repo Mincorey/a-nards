@@ -1,0 +1,23 @@
+import * as S from './supabase/functions/_shared/short.ts';
+import * as L from './supabase/functions/_shared/long.ts';
+import { allowedMoves, maximalSequences } from './supabase/functions/_shared/rules.ts';
+let pass=0, fail=0;
+const ok=(c,m)=>{ if(c){pass++; console.log('ok  -',m);} else {fail++; console.log('FAIL-',m);} };
+let s=S.initState();
+ok(S.checkerCount(s,'w')===15 && S.checkerCount(s,'b')===15,'короткие: 15/15 шашек на старте');
+let rng=(()=>{let a=[2/6,0/6];let i=0;return ()=>a[i++%2];})();
+S.startTurn(s,rng);
+ok(JSON.stringify(s.rolled)===JSON.stringify([3,1]),'короткие: детерм. бросок [3,1] = '+JSON.stringify(s.rolled));
+ok(allowedMoves(s).length>0,'короткие: есть легальные ходы ('+allowedMoves(s).length+')');
+let l=L.initState();
+ok(l.pts[23]===15 && l.pts[11]===-15,'длинные: головы 15/-15');
+ok(L.checkerCount(l,'w')===15 && L.checkerCount(l,'b')===15,'длинные: 15/15 шашек');
+let rl=(()=>{let a=[2/6,0/6];let i=0;return ()=>a[i++%2];})();
+L.startTurn(l,rl);
+ok(allowedMoves(l).length>0,'длинные: есть легальные ходы ('+allowedMoves(l).length+')');
+let g=S.initState(); let guard=0; let winner=null;
+while(guard++<3000){ S.startTurn(g, Math.random); let seqs=maximalSequences(g); if(seqs.length>0){ for(const m of seqs[0]) S.applyMove(g,m.from,m.to,m.die); } if(S.isGameOver(g)){ winner=S.winner(g); break; } S.endTurn(g); }
+ok(winner!==null,'короткие: авто-партия дошла до конца, победитель='+winner+', полуходов='+guard);
+ok(S.checkerCount(g,'w')===15 && S.checkerCount(g,'b')===15,'короткие: целостность шашек после партии');
+console.log(`\nСМОУК-ТЕСТ: ${pass} прошло, ${fail} провалено`);
+process.exit(fail?1:0);

@@ -96,6 +96,21 @@ export default function TablePage() {
     return () => setInGame(false);
   }, [g.game]);
 
+  // Быстрый стол (матчмейкинг): как только оба игрока сели — партия стартует
+  // автоматически (стартует хозяин), без ручного «Начать игру». Для обычных
+  // столов старт остаётся ручным. start-game идемпотентна — двойного старта нет.
+  const autoStartedRef = useRef(false);
+  useEffect(() => {
+    const t = data?.table;
+    const seatsFull = (data?.seats.length ?? 0) >= 2;
+    const iAmOwner = t?.owner_id === auth.user?.id;
+    const gameActive = Boolean(g.game && g.game.status === 'playing');
+    if (t?.quick && seatsFull && iAmOwner && !gameActive && !autoStartedRef.current) {
+      autoStartedRef.current = true;
+      startGame(id).catch(() => { autoStartedRef.current = false; });
+    }
+  }, [data, g.game, auth.user, id]);
+
   // Победа онлайн — подтягиваем обновлённый рейтинг (finalize_game уже применил
   // Elo на сервере) и считаем прирост относительно захваченного «до».
   useEffect(() => {
@@ -297,9 +312,9 @@ export default function TablePage() {
       {g.phase === 'gameover' && !overDismissed && (
         <GameOverModal
           won={g.game?.winner === myColor}
-          subtitle={g.game?.winner === myColor ? 'Вы вынесли все шашки первыми.' : 'Соперник вынес все шашки первым.'}
           rating={ratingInfo}
-          onAgain={onStart}
+          onAgain={() => { void leaveTable(id); nav('/lobby', { state: { create: true } }); }}
+          againLabel="Создать стол"
           onLobby={() => nav('/')}
           onClose={() => setOverDismissed(true)}
         />

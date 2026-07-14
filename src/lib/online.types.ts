@@ -15,6 +15,7 @@ export interface GameTable {
   visibility: Visibility;
   settings: Record<string, unknown>;
   status: TableStatus;
+  quick: boolean;
   created_at: string;
 }
 

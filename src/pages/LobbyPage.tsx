@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import {
-  listOpenTables, createTable, joinTable, subscribeLobby,
+  listOpenTables, createTable, joinTable, subscribeLobby, findQuickCandidates,
   type TableListItem,
 } from '../lib/online';
 import { getFriends, createInvite, type MiniProfile } from '../lib/friends';
@@ -14,11 +14,13 @@ import type { Variant } from '../lib/online.types';
 export default function LobbyPage() {
   const auth = useAuth();
   const nav = useNavigate();
+  const location = useLocation();
   const { isOnline } = useOnline();
   const [tables, setTables] = useState<TableListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [searching, setSearching] = useState(false);
 
   // Модалка создания стола
   const [creating, setCreating] = useState(false);
@@ -40,6 +42,17 @@ export default function LobbyPage() {
     const unsub = subscribeLobby(refresh);
     return unsub;
   }, [auth.user, refresh]);
+
+  // Открытие модалки создания стола по переходу из модалки окончания партии
+  // (кнопка «Создать стол» на экране победы уводит сюда с state.create).
+  useEffect(() => {
+    const st = location.state as { create?: boolean } | null;
+    if (auth.user && st?.create) {
+      openCreate();
+      nav('/lobby', { replace: true, state: {} });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auth.user, location.state]);
 
   if (!auth.ready) return <section className="lobby"><div className="card"><p>Загрузка…</p></div></section>;
   if (!auth.user) {
@@ -82,6 +95,28 @@ export default function LobbyPage() {
     finally { setBusy(false); }
   }
 
+  // «Играть» — быстрый подбор живого соперника. Ищем другого игрока, который
+  // тоже в поиске (быстрый стол с одним игроком, хозяин онлайн) — и подсаживаемся
+  // к нему; если таких нет — создаём свой быстрый стол и ждём. Когда оба на
+  // местах, партия стартует автоматически (см. TablePage).
+  async function quickPlay() {
+    setError(null); setSearching(true); setBusy(true);
+    try {
+      const cands = await findQuickCandidates('short');
+      for (const c of cands) {
+        if (!isOnline(c.owner_id)) continue;
+        try { await joinTable(c.id); nav(`/table/${c.id}`); return; }
+        catch { /* стол только что заняли — пробуем следующего */ }
+      }
+      // Никого не нашли — встаём в очередь: создаём быстрый стол и ждём соперника.
+      const table = await createTable({ name: 'Быстрая игра', variant: 'short', visibility: 'public', quick: true });
+      nav(`/table/${table.id}`, { state: { quick: true } });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Не удалось начать поиск');
+      setSearching(false); setBusy(false);
+    }
+  }
+
   // Показываем только столы, чей владелец сейчас в сети — брошенные (владелец
   // ушёл, а стол завис в лобби) не показываем, чтобы никто не попал в мёртвую партию.
   const visibleTables = tables.filter((t) => isOnline(t.owner_id));
@@ -93,7 +128,10 @@ export default function LobbyPage() {
         <h1>Лобби</h1>
         <div className="lobby__actions">
           <button className="btn" onClick={refresh}>Обновить</button>
-          <button className="btn btn--primary" onClick={openCreate}>Создать стол</button>
+          <button className="btn btn--primary" onClick={quickPlay} disabled={busy || searching}>
+            {searching ? 'Поиск соперника…' : 'Играть'}
+          </button>
+          <button className="btn" onClick={openCreate} disabled={searching}>Создать стол</button>
         </div>
       </div>
 
