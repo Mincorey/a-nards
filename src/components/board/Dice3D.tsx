@@ -152,3 +152,15 @@ export default function Dice3D({ values, remaining, rollId, size, left, top }: D
     </div>
   );
 }
+
+/** Один кубик жеребьёвки «кто ходит первым» — оверлей на стороне игрока. */
+export function OpeningDie({ value, rollId, size, left, top }: { value: number; rollId: number; size: number; left: number; top: number }) {
+  return (
+    <div
+      className="d3-layer"
+      style={{ left: `${left}%`, top: `${top}%`, ['--d3-size' as string]: `${size}px`, ['--d3-half' as string]: `${size / 2}px` }}
+    >
+      <Cube value={value} rollId={rollId} dir={1} used={false} />
+    </div>
+  );
+}

@@ -9,7 +9,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Board from './board/Board';
-import DieFace from './board/DieFace';
 import PlayerPanel from './PlayerPanel';
 import GameSettingsModal from './GameSettingsModal';
 import GameChat from './GameChat';
@@ -55,6 +54,9 @@ export default function BotGame({ onNewGame }: Props) {
   const whiteActive = g.phase === 'humanRoll' || g.phase === 'humanMove';
   const blackActive = g.phase === 'botTurn';
   const isOpening = g.phase === 'openingRoll';
+  // Во время жеребьёвки, когда кубики уже показаны, текст-статус прячем —
+  // результат показывает плашка на доске (см. Board opening).
+  const statusText = isOpening && g.openingDice ? null : g.message;
   // Уведомление направляем к аватару того, чей сейчас ход (в ландшафте — см. CSS).
   const youNote = whiteActive ? g.message : null;
   const botNote = blackActive ? g.message : null;
@@ -67,23 +69,9 @@ export default function BotGame({ onNewGame }: Props) {
           active={blackActive} turnKey={g.rollId} seconds={20} note={botNote}
         />
         <div className="game__board">
-          <div className={'game__status' + (whiteActive ? ' is-you' : '') + (isOpening ? ' game__status--opening' : '')}>
-            {g.phase === 'openingRoll' && g.openingDice ? (
-              <div className="opening-roll">
-                <div className="opening-roll__row">
-                  <span className="opening-roll__label">Соперник бросил</span>
-                  <DieFace value={g.openingDice.bot} size={30} />
-                </div>
-                <div className="opening-roll__row">
-                  <span className="opening-roll__label">Вы бросили</span>
-                  <DieFace value={g.openingDice.human} size={30} />
-                </div>
-                <span className="opening-roll__result">{g.message}</span>
-              </div>
-            ) : (
-              g.message
-            )}
-          </div>
+          {statusText && (
+            <div className={'game__status' + (whiteActive ? ' is-you' : '')}>{statusText}</div>
+          )}
           <Board
             state={g.game}
             selected={g.selected}
@@ -95,6 +83,7 @@ export default function BotGame({ onNewGame }: Props) {
             canRoll={g.phase === 'humanRoll'}
             onRoll={g.roll}
             myColor="w"
+            opening={isOpening && g.openingDice ? { left: g.openingDice.bot, right: g.openingDice.human, result: g.message, rollId: g.rollId } : null}
           />
         </div>
         <PlayerPanel

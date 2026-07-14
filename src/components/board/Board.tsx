@@ -5,7 +5,7 @@ import {
   VB, DIVIDER, COL_W, CHECKER_R, DICE_AREA, MID_Y,
   allPoints, pointCell, checkerPos, barPos, offPos, type PointGeom,
 } from './boardLayout';
-import Dice3D from './Dice3D';
+import Dice3D, { OpeningDie } from './Dice3D';
 import { IconDice } from '../icons';
 import './board.css';
 
@@ -31,6 +31,8 @@ export interface BoardProps {
   /** Цвет локального игрока: замедляет чужие ходы И ориентирует доску так, чтобы
    *  СВОЙ дом (зона выноса) был в правой-нижней четверти. По умолчанию — белые. */
   myColor?: Color;
+  /** Жеребьёвка «кто ходит первым»: по одной кости на игрока (слева соперник, справа я). */
+  opening?: { left: number; right: number; result: string | null; rollId: number } | null;
 }
 
 const IMG = (c: Color) => (c === 'w' ? WHITE_IMG : BLACK_IMG);
@@ -136,7 +138,7 @@ function slotPos(
 }
 
 export default function Board({
-  state, selected, sources, targets, onPick, rollId = 0, diceRemaining, canRoll, onRoll, myColor,
+  state, selected, sources, targets, onPick, rollId = 0, diceRemaining, canRoll, onRoll, myColor, opening,
 }: BoardProps) {
   const interactive = Boolean(onPick);
   const viewer: Color = myColor ?? 'w';
@@ -146,6 +148,17 @@ export default function Board({
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
   const [diceSize, setDiceSize] = useState(56);
+
+  // Плашку «кто первый» показываем не сразу, а через ~0.9с после появления
+  // кубиков жеребьёвки — сначала игрок видит, что выпало, затем результат.
+  const [openingBannerShown, setOpeningBannerShown] = useState(false);
+  useEffect(() => {
+    if (!opening) { setOpeningBannerShown(false); return; }
+    setOpeningBannerShown(false);
+    const t = window.setTimeout(() => setOpeningBannerShown(true), 900);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [opening?.rollId, Boolean(opening)]);
 
   // Px-размер кубика пропорционально ширине доски.
   useEffect(() => {
@@ -462,6 +475,17 @@ export default function Board({
             style={{ transform: `translate(${drag.x - dragR}px, ${drag.y - dragR}px)` }} />
         )}
       </svg>
+
+      {/* Жеребьёвка «кто ходит первым» — по одной кости на стороне игрока + плашка. */}
+      {opening && (
+        <>
+          <OpeningDie value={opening.left} rollId={opening.rollId} size={diceSize * 1.15} left={26} top={50} />
+          <OpeningDie value={opening.right} rollId={opening.rollId} size={diceSize * 1.15} left={74} top={50} />
+          {openingBannerShown && opening.result && (
+            <div className="bd-firstbanner"><span>{opening.result}</span></div>
+          )}
+        </>
+      )}
 
       {/* 3D-кубики — HTML-оверлей над доской */}
       {state.rolled && (

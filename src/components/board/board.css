@@ -76,3 +76,19 @@
   .bd-off--enter { animation: none; }
   .bd-fly { display: none; }
 }
+
+/* Плашка «кто ходит первым» — по центру доски после жеребьёвки. */
+.bd-firstbanner {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  z-index: 6; pointer-events: none; white-space: nowrap;
+  padding: 0.5rem 1.25rem; border-radius: 999px;
+  background: linear-gradient(180deg, #eac877, #c79a3e); color: #2a1d10;
+  font-weight: 800; font-size: 1.05rem;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
+  animation: bd-firstbanner-in 0.35s ease-out;
+}
+@keyframes bd-firstbanner-in {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.82); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) { .bd-firstbanner { animation: none; } }
