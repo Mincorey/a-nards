@@ -39,6 +39,8 @@ export interface GameRow {
   dice: number[];
   rolled: number[] | null;
   match_score: Record<string, unknown>;
+  /** Жеребьёвка «кто первый»: выпавшие кости по цвету (или null для старых партий). */
+  opening?: { w: number; b: number } | null;
   status: 'playing' | 'finished';
   winner: 'w' | 'b' | null;
   ply: number;

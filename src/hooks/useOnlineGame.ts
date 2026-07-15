@@ -10,7 +10,7 @@ import { targetsFrom, legalSources, allowedMoves } from '../game/rules';
 import * as E from '../engine/core';
 
 export type Spot = number | 'bar' | 'off';
-export type OnlinePhase = 'loading' | 'myRoll' | 'myMove' | 'opponent' | 'gameover';
+export type OnlinePhase = 'loading' | 'opening' | 'myRoll' | 'myMove' | 'opponent' | 'gameover';
 
 export interface UseOnlineGame {
   game: GameRow | null;
@@ -24,6 +24,8 @@ export interface UseOnlineGame {
   busy: boolean;
   error: string | null;
   rollId: number;
+  /** Жеребьёвка «кто первый»: кости на сторонах доски (слева соперник, справа я). */
+  opening: { left: number; right: number; result: string | null; rollId: number } | null;
   roll: () => void;
   pick: (spot: Spot) => void;
 }
@@ -77,13 +79,38 @@ export function useOnlineGame(tableId: string, myColor: Color | null): UseOnline
   const state = game?.state ?? null;
   const myTurn = Boolean(game && myColor && game.turn === myColor && game.status === 'playing');
 
+  // Жеребьёвка «кто ходит первым»: показываем, пока партия только началась
+  // (ply 0, ещё не бросали) и в строке есть opening. Через ~2.8с локально
+  // гасим оверлей, чтобы у первого игрока появилась кнопка «Бросить кубики».
+  const [openingClearedFor, setOpeningClearedFor] = useState<string | null>(null);
+  const showOpeningRaw = Boolean(game && game.opening && game.ply === 0 && !state?.rolled && game.status === 'playing');
+  const showOpening = showOpeningRaw && openingClearedFor !== (game?.id ?? null);
+  useEffect(() => {
+    if (!showOpeningRaw || !game) return;
+    const gid = game.id;
+    const t = window.setTimeout(() => { if (mounted.current) setOpeningClearedFor(gid); }, 2800);
+    return () => window.clearTimeout(t);
+  }, [showOpeningRaw, game?.id]);
+
   const phase: OnlinePhase = useMemo(() => {
     if (!game) return 'loading';
     if (game.status === 'finished') return 'gameover';
+    if (showOpening) return 'opening';
     if (!myColor) return 'opponent';
     if (game.turn !== myColor) return 'opponent';
     return state?.rolled ? 'myMove' : 'myRoll';
-  }, [game, myColor, state]);
+  }, [game, myColor, state, showOpening]);
+
+  const opening = useMemo(() => {
+    if (!showOpening || !game?.opening) return null;
+    const o = game.opening;
+    const myDie = myColor ? o[myColor] : o.w;
+    const oppDie = myColor ? o[myColor === 'w' ? 'b' : 'w'] : o.b;
+    const result = myColor
+      ? (game.turn === myColor ? 'Вы ходите первым' : 'Первым ходит соперник')
+      : (game.turn === 'w' ? 'Первым ходят белые' : 'Первым ходят чёрные');
+    return { left: oppDie, right: myDie, result, rollId: 0 };
+  }, [showOpening, game, myColor]);
 
   const sources = useMemo(
     () => (myTurn && state?.rolled ? legalSources(state) : new Set<number | 'bar'>()),
@@ -169,6 +196,7 @@ export function useOnlineGame(tableId: string, myColor: Color | null): UseOnline
     if (error) return error;
     switch (phase) {
       case 'loading': return 'Загрузка партии…';
+      case 'opening': return '';
       case 'myRoll': return 'Ваш ход — бросьте кубики';
       case 'myMove': return busy ? 'Ход…' : 'Выберите шашку и ход';
       case 'opponent': return myColor ? 'Ход соперника…' : 'Идёт партия';
@@ -181,6 +209,7 @@ export function useOnlineGame(tableId: string, myColor: Color | null): UseOnline
 
   return {
     game, state, phase, myColor, selected, sources, targets, message, busy, error, rollId,
+    opening,
     roll, pick,
   };
 }

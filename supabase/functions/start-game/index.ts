@@ -24,13 +24,18 @@ Deno.serve(async (req) => {
     if (existing) return json({ game: existing }, 200, req);
 
     const state = E.initState(table.variant as 'short' | 'long');
-    // Первый ход — честный крипто-выбор (не предсказуем, аудит H2).
-    const first: 'w' | 'b' = secureRng() < 0.5 ? 'w' : 'b';
+    // Жеребьёвка «кто ходит первым»: по одной кости на цвет (крипто-ГСЧ), при
+    // равенстве перебрасываем; у кого больше — тот и начинает. Кости сохраняем
+    // в games.opening, чтобы ОБА игрока увидели одинаковый бросок на сторонах доски.
+    const d6 = () => 1 + Math.floor(secureRng() * 6);
+    let ow = d6(), ob = d6();
+    while (ow === ob) { ow = d6(); ob = d6(); }
+    const first: 'w' | 'b' = ow > ob ? 'w' : 'b';
     state.turn = first;
 
     const { data: game, error } = await db.from('games').insert({
       table_id, variant: table.variant, state, turn: first,
-      dice: [], rolled: null, status: 'playing', ply: 0,
+      dice: [], rolled: null, status: 'playing', ply: 0, opening: { w: ow, b: ob },
     }).select().single();
     if (error) throw new HttpError(500, error.message);
 

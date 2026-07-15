@@ -226,7 +226,7 @@ export default function TablePage() {
         {panel('w')}
 
         <div className="game__board">
-          {activeGame && <div className={'game__status' + (g.phase === 'myMove' || g.phase === 'myRoll' ? ' is-you' : '')}>{g.message}</div>}
+          {activeGame && g.message && <div className={'game__status' + (g.phase === 'myMove' || g.phase === 'myRoll' ? ' is-you' : '')}>{g.message}</div>}
           {g.game && g.state ? (
             <Board
               state={g.state}
@@ -239,6 +239,7 @@ export default function TablePage() {
               canRoll={g.phase === 'myRoll'}
               onRoll={g.roll}
               myColor={myColor ?? undefined}
+              opening={g.opening}
             />
           ) : (
             <div className="game__wait card">
