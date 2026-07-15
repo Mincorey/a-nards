@@ -88,7 +88,7 @@ export function useOnlineGame(tableId: string, myColor: Color | null): UseOnline
   useEffect(() => {
     if (!showOpeningRaw || !game) return;
     const gid = game.id;
-    const t = window.setTimeout(() => { if (mounted.current) setOpeningClearedFor(gid); }, 2800);
+    const t = window.setTimeout(() => { if (mounted.current) setOpeningClearedFor(gid); }, 3500);
     return () => window.clearTimeout(t);
   }, [showOpeningRaw, game?.id]);
 

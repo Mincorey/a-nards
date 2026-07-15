@@ -79,7 +79,7 @@
 
 /* Плашка «кто ходит первым» — по центру доски после жеребьёвки. */
 .bd-firstbanner {
-  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  position: absolute; left: 50%; top: 30%; transform: translate(-50%, -50%);
   z-index: 6; pointer-events: none; white-space: nowrap;
   padding: 0.5rem 1.25rem; border-radius: 999px;
   background: linear-gradient(180deg, #eac877, #c79a3e); color: #2a1d10;
