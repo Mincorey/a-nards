@@ -11,7 +11,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Color, GameState, Move, Variant } from '../engine/types';
 import * as E from '../engine/core';
-import { allowedMoves, targetsFrom, legalSources } from './rules';
+import { allowedMoves, targetsFrom, legalSources, chainedTargetsFrom } from './rules';
 import { chooseSequence, type Difficulty } from './bot';
 
 export type Spot = number | 'bar' | 'off';
@@ -144,6 +144,21 @@ export function useGame(
         }
         return;
       }
+      // Цепочка: клик по КОНЕЧНОЙ точке — играем всю последовательность одной шашкой.
+      const chain = chainedTargetsFrom(s, from).find((c) => c.to === spot);
+      if (chain) {
+        for (const mv of chain.seq) E.applyMove(s, mv.from, mv.to, mv.die);
+        setSelected(null);
+        render();
+        if (checkWin()) return;
+        if (allowedMoves(s).length === 0) {
+          setMessage('Ход завершён');
+          setTimeout(() => { if (mounted.current) endHuman(); }, 500);
+        } else {
+          setMessage('Продолжайте ход');
+        }
+        return;
+      }
       if (spot === selected) { setSelected(null); return; }
     }
     if ((spot === 'bar' || typeof spot === 'number') && srcs.has(spot as number | 'bar')) {
@@ -253,10 +268,15 @@ export function useGame(
     reset();
   }, [variant, reset]);
 
-  const targets = useMemo(
-    () => (selected !== null && phase === 'humanMove' ? targetsFrom(snap, selected as number | 'bar') : []),
-    [selected, phase, snap],
-  );
+  const targets = useMemo(() => {
+    if (!(selected !== null && phase === 'humanMove')) return [];
+    const from = selected as number | 'bar';
+    const single = targetsFrom(snap, from);
+    // Конечные точки цепочки (оба кубика одной шашкой) — как дополнительные цели.
+    const chainMoves: Move[] = chainedTargetsFrom(snap, from)
+      .map((c) => ({ from, to: c.to, die: c.seq[c.seq.length - 1].die }));
+    return [...single, ...chainMoves];
+  }, [selected, phase, snap]);
   const sources = useMemo(
     () => (phase === 'humanMove' ? legalSources(snap) : new Set<number | 'bar'>()),
     [phase, snap],

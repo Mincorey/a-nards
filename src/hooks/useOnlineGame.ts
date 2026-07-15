@@ -5,8 +5,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Color, GameState } from '../engine/types';
 import type { GameRow } from '../lib/online.types';
-import { getActiveGame, playMove, rollDice, subscribeTable, createGameSync } from '../lib/online';
-import { targetsFrom, legalSources, allowedMoves } from '../game/rules';
+import { getActiveGame, playMove, passTurn, rollDice, subscribeTable, createGameSync } from '../lib/online';
+import { targetsFrom, legalSources, allowedMoves, chainedTargetsFrom } from '../game/rules';
 import * as E from '../engine/core';
 
 export type Spot = number | 'bar' | 'off';
@@ -116,10 +116,15 @@ export function useOnlineGame(tableId: string, myColor: Color | null): UseOnline
     () => (myTurn && state?.rolled ? legalSources(state) : new Set<number | 'bar'>()),
     [myTurn, state],
   );
-  const targets = useMemo(
-    () => (myTurn && state?.rolled && selected !== null ? targetsFrom(state, selected as number | 'bar') : []),
-    [myTurn, state, selected],
-  );
+  const targets = useMemo(() => {
+    if (!(myTurn && state?.rolled && selected !== null)) return [];
+    const from = selected as number | 'bar';
+    const single = targetsFrom(state, from);
+    // Конечные точки цепочки (оба кубика одной шашкой) — дополнительные цели.
+    const chainMoves = chainedTargetsFrom(state, from)
+      .map((c) => ({ from, to: c.to, die: c.seq[c.seq.length - 1].die }));
+    return [...single, ...chainMoves];
+  }, [myTurn, state, selected]);
 
   const rollId = game ? game.ply * 2 + (state?.rolled ? 1 : 0) : 0;
 
@@ -183,6 +188,41 @@ export function useOnlineGame(tableId: string, myColor: Color | null): UseOnline
           .finally(() => { if (mounted.current) setBusy(false); });
         return;
       }
+      // Цепочка: клик по КОНЕЧНОЙ точке — оптимистично применяем всю
+      // последовательность одной шашкой, а на сервер отправляем полуходы по
+      // очереди (play-move идемпотентна по updated_at). Отказ — откат к prev.
+      const chain = chainedTargetsFrom(state, from).find((c) => c.to === spot);
+      if (chain) {
+        const prev = game;
+        const next = E.cloneState(state);
+        for (const mv of chain.seq) E.applyMove(next, mv.from, mv.to, mv.die);
+        if (!E.isGameOver(next) && allowedMoves(next).length === 0) E.endTurn(next);
+        const turnPassed = next.turn !== state.turn;
+        const optimistic: GameRow = {
+          ...game, state: next, turn: next.turn, dice: next.dice, rolled: next.rolled,
+          ply: game.ply + (turnPassed ? 1 : 0),
+        };
+        gameRef.current = optimistic;
+        setGame(optimistic);
+        setSelected(null);
+        setBusy(true); setError(null);
+        (async () => {
+          try {
+            let last: GameRow | null = null;
+            for (const mv of chain.seq) { const r = await playMove(game.id, mv); last = r.game; }
+            if (!mounted.current) return;
+            if (last) { applyIncoming(last); sync.send(last); }
+          } catch (e) {
+            if (!mounted.current) return;
+            gameRef.current = prev;
+            setGame(prev);
+            setError(e instanceof Error ? e.message : 'Ошибка хода');
+          } finally {
+            if (mounted.current) setBusy(false);
+          }
+        })();
+        return;
+      }
       if (spot === selected) { setSelected(null); return; }
     }
     if ((spot === 'bar' || typeof spot === 'number') && srcs.has(spot as number | 'bar')) {
@@ -192,18 +232,38 @@ export function useOnlineGame(tableId: string, myColor: Color | null): UseOnline
     setSelected(null);
   }, [game, phase, busy, state, selected, applyIncoming, sync]);
 
+  // Авто-пас в онлайне: если после броска у ходящего НЕТ ходов, кости уже
+  // показаны обоим игрокам (сервер roll-dice больше не пасует сам). Даём ~2.4с
+  // разглядеть, что выпало, и только затем просим сервер пропустить ход
+  // (pass-turn). Так анимация броска видна ВСЕГДА, даже когда сходить нечем.
+  useEffect(() => {
+    if (phase !== 'myMove' || !game || !state || busy) return;
+    if (sources.size > 0) return; // есть ходы — не пасуем
+    const gid = game.id;
+    const t = window.setTimeout(() => {
+      if (!mounted.current) return;
+      passTurn(gid).then((r) => {
+        if (!mounted.current) return;
+        applyIncoming(r.game);
+        sync.send(r.game);
+      }).catch(() => { /* сервер отклонит, если ход уже сменился */ });
+    }, 2400);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, game?.id, game?.ply, state?.rolled, sources, busy]);
+
   const message = useMemo(() => {
     if (error) return error;
     switch (phase) {
       case 'loading': return 'Загрузка партии…';
       case 'opening': return '';
       case 'myRoll': return 'Ваш ход — бросьте кубики';
-      case 'myMove': return busy ? 'Ход…' : 'Выберите шашку и ход';
+      case 'myMove': return busy ? 'Ход…' : (sources.size === 0 ? 'Ходов нет — ход перейдёт сопернику' : 'Выберите шашку и ход');
       case 'opponent': return myColor ? 'Ход соперника…' : 'Идёт партия';
       case 'gameover': return game?.winner === myColor ? 'Вы победили!' : 'Партия завершена';
       default: return '';
     }
-  }, [phase, busy, error, myColor, game]);
+  }, [phase, busy, error, myColor, game, sources]);
 
   useEffect(() => { setSelected(null); }, [game?.ply, game?.turn]);
 

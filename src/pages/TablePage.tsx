@@ -68,10 +68,17 @@ export default function TablePage() {
   // Партия за столом идёт — переход по верхнему меню должен подтверждаться;
   // после подтверждения освобождаем место за столом, как и по кнопке «Выйти».
   const leaveNow = useCallback(() => {
-    // Уход из АКТИВНОЙ партии = сдача: соперник получает победу, затем место освобождается.
+    // Уход из АКТИВНОЙ партии = сдача: соперник получает победу, затем место
+    // освобождается. ВАЖНО: сначала ДОЖДАТЬСЯ resign (сервер финализирует партию
+    // и начислит рейтинг), и только потом освобождать место. Иначе (как было
+    // раньше — оба вызова без ожидания) leaveTable успевал удалить место раньше,
+    // чем resign читал его цвет: финализация падала (403), победа сопернику не
+    // начислялась, и он ждал таймаут хода вместо мгновенной победы.
     const gid = g.game && g.game.status === 'playing' ? g.game.id : null;
-    if (gid) void resignGame(gid).catch(() => { /* всё равно уходим */ });
-    void leaveTable(id);
+    void (async () => {
+      if (gid) { try { await resignGame(gid); } catch { /* всё равно уходим */ } }
+      try { await leaveTable(id); } catch { /* ignore */ }
+    })();
   }, [id, g.game]);
   useRegisterNavGuard(Boolean(g.game && g.game.status === 'playing'), leaveNow);
 
@@ -114,7 +121,7 @@ export default function TablePage() {
   // Победа онлайн — подтягиваем обновлённый рейтинг (finalize_game уже применил
   // Elo на сервере) и считаем прирост относительно захваченного «до».
   useEffect(() => {
-    if (g.phase !== 'gameover' || g.game?.winner !== myColor) return;
+    if (g.phase !== 'gameover') return; // рейтинг показываем и при победе, и при поражении
     if (ratingBeforeRef.current == null || ratingInfo) return;
     let alive = true;
     fetchMyRating().then((after) => {

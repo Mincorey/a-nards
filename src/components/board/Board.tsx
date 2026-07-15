@@ -102,6 +102,17 @@ interface Flight {
   victim?: { color: Color; r: number; from: { cx: number; cy: number }; to: { cx: number; cy: number } };
 }
 
+/* Анти-фантом: окно защиты от повторной анимации одного и того же перемещения
+ * при сетевой «осцилляции» состояния (дубль/реордер входящих обновлений, когда
+ * доска на короткое время возвращается к уже виденной позиции). Должно быть
+ * заведомо больше самой длинной анимации перелёта (1500 мс). */
+const FLIGHT_GUARD_MS = 2500;
+
+/** Хеш позиции ТОЛЬКО по фишкам (пункты/бар/вынос) — без хода/кубиков. */
+function posHash(s: GameState): string {
+  return s.pts.join(',') + '|' + s.bar.w + ',' + s.bar.b + '|' + s.off.w + ',' + s.off.b;
+}
+
 function slotCounts(s: GameState): Map<string, number> {
   const m = new Map<string, number>();
   for (let i = 0; i < 24; i++) {
@@ -174,12 +185,24 @@ export default function Board({
   const prevStateRef = useRef<GameState | null>(null);
   const flightIdRef = useRef(0);
   const [flight, setFlight] = useState<Flight | null>(null);
+  // История недавних позиций — чтобы не проигрывать полёт повторно при осцилляции.
+  const recentPosRef = useRef<{ h: string; t: number }[]>([]);
 
   useEffect(() => {
     const prev = prevStateRef.current;
     prevStateRef.current = state;
+    // Регистрируем текущую позицию и проверяем, не возвращаемся ли мы к недавней
+    // (осцилляция из-за дубля/реордера сетевого состояния). Такое «перемещение»
+    // не анимируем — иначе появляется фантомная вторая анимация того же хода.
+    const now = Date.now();
+    const curHash = posHash(state);
+    const recent = recentPosRef.current.filter((e) => now - e.t < FLIGHT_GUARD_MS);
+    const revisit = recent.some((e) => e.h === curHash);
+    recent.push({ h: curHash, t: now });
+    recentPosRef.current = recent;
     if (!prev || prev.variant !== state.variant) return; // первый рендер / новая партия — не анимируем
     if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    if (revisit) return; // возврат к недавней позиции — не проигрываем полёт повторно
 
     const before = slotCounts(prev);
     const after = slotCounts(state);

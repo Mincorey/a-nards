@@ -124,6 +124,45 @@ export function targetsFrom(s: GameState, from: number | 'bar'): Move[] {
   return allowedMoves(s).filter((m) => m.from === from);
 }
 
+/**
+ * «Конечные» точки для ОДНОЙ шашки из `from` — цепочки длиной ≥2 полуходов,
+ * где каждый следующий полуход продолжает ТУ ЖЕ шашку (последовательное
+ * использование обоих кубиков, а для дублей — до четырёх). Нужны, чтобы игрок
+ * мог одним кликом сразу переместить шашку в максимально далёкую доступную
+ * точку, не тыкая по промежуточным. Каждый достижимый конечный пункт возвращается
+ * один раз, с кратчайшей ведущей к нему последовательностью полуходов.
+ *
+ * Легальность и максимальность гарантируются тем, что и первый полуход, и все
+ * продолжения берутся из allowedMoves(...) соответствующего состояния — то есть
+ * цепочка всегда является частью максимальной последовательности хода.
+ */
+export function chainedTargetsFrom(s: GameState, from: number | 'bar'): { to: number | 'off'; seq: Move[] }[] {
+  const out = new Map<string, Move[]>();
+
+  const walk = (st: GameState, pos: number, acc: Move[]): void => {
+    const conts = allowedMoves(st).filter((m) => m.from === pos);
+    for (const m of conts) {
+      const seq = [...acc, m];
+      const k = String(m.to);
+      if (!out.has(k)) out.set(k, seq);
+      if (m.to === 'off') continue; // с выноса продолжать нечем
+      const ns = E.cloneState(st);
+      E.applyMove(ns, m.from, m.to, m.die);
+      walk(ns, m.to, seq);
+    }
+  };
+
+  const first = allowedMoves(s).filter((m) => m.from === from);
+  for (const m1 of first) {
+    if (m1.to === 'off') continue;
+    const s1 = E.cloneState(s);
+    E.applyMove(s1, m1.from, m1.to, m1.die);
+    walk(s1, m1.to, [m1]);
+  }
+
+  return [...out.entries()].map(([to, seq]) => ({ to: to === 'off' ? 'off' : Number(to), seq }));
+}
+
 /** Источники, из которых есть разрешённый ход. */
 export function legalSources(s: GameState): Set<number | 'bar'> {
   return new Set(allowedMoves(s).map((m) => m.from));

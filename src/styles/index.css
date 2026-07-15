@@ -869,68 +869,6 @@ body::after {
 .header-toggle { display: none; }
 .header-toggle__scrim { display: none; }
 
-@media (orientation: landscape) and (max-height: 600px), (orientation: landscape) and (pointer: coarse) and (max-width: 1000px) {
-  /* Растягиваем фон на весь экран (в contain-режиме в этой ориентации оставались
-     пустые поля) и убираем прокрутку — доска должна помещаться по высоте целиком. */
-  body::before { background-size: cover; }
-  html, body { overflow: hidden; height: 100%; }
-
-  .app__header {
-    position: fixed; top: 0; left: 0; right: 0; z-index: 20;
-    transform: translateY(-100%);
-    transition: transform 0.25s ease;
-  }
-  .app__header.is-open { transform: translateY(0); }
-
-  .header-toggle {
-    display: flex; align-items: center; justify-content: center;
-    position: fixed; top: 0; left: 50%; transform: translateX(-50%);
-    z-index: 21; width: 44px; height: 18px;
-    background: rgba(20, 13, 7, 0.8); border: 1px solid rgba(216, 184, 120, 0.35); border-top: none;
-    border-radius: 0 0 10px 10px; color: var(--wood-light); cursor: pointer;
-  }
-  .header-toggle__arrow { display: inline-block; font-size: 0.75rem; transition: transform 0.2s ease; }
-  .header-toggle__arrow.is-open { transform: rotate(180deg); }
-  .header-toggle__scrim { display: block; position: fixed; inset: 0; z-index: 19; background: rgba(0, 0, 0, 0.3); }
-
-  .app__main { padding: 0.25rem 0.6rem; }
-  .game { gap: 0.25rem; padding-top: 1.5rem; }
-  .game-info { font-size: 0.68rem; padding: 0.22rem 0.55rem; gap: 0.35rem; }
-  .game__status { padding: 0.22rem 0.7rem; font-size: 0.74rem; margin-bottom: 0.1rem; }
-
-  /* Бросок «кто ходит первым» — база уже строкой (см. .opening-roll выше),
-     здесь только дожимаем под тесную высоту: без переноса и мельче кости. */
-  .opening-roll { flex-wrap: nowrap; gap: 0.5rem; }
-  .opening-roll__row { gap: 0.3rem; }
-  .game__status .die-face { width: 16px !important; height: 16px !important; }
-
-  /* Возвращаем обычный горизонтальный ряд «аватар — доска — аватар» (как на
-     десктопе) — аватары и текст статуса/инфо остаются читаемыми, НЕ повёрнуты.
-     Крутим ТОЛЬКО сам SVG доски (.bd-svg — пункты/фишки/подсветка), а НЕ весь
-     .bd-wrap: внутри .bd-wrap рядом со svg лежит HTML-оверлей (3D-кубики и
-     кнопка «Бросить кубики» — см. Board.tsx), и если крутить весь .bd-wrap,
-     этот оверлей тоже поворачивается на 90° и его текст читается боком. SVG
-     квадратный (aspect-ratio 1/1 у .bd-wrap), поэтому поворот на 90° не меняет
-     его габаритный прямоугольник — крутить можно прямо на месте.
-     Свободное место по бокам доски (на широких невысоких экранах доска
-     ограничена именно высотой) отдаём панелям игроков: у них flex:1 — они
-     растягиваются и центрируют своё содержимое, аватар и имя увеличены. */
-  .game__table { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 0.4rem; }
-  .game__p {
-    flex: 1 1 0; min-width: 64px; max-width: 240px;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-  }
-  .game__board { flex: 0 0 auto; }
-  .game__board .bd-wrap {
-    width: 75vh; height: 75vh; max-width: 75vh; max-height: 75vh; margin: 0 auto;
-  }
-  .game__board .bd-wrap .bd-svg { transform: rotate(90deg); }
-  .pp__ring { width: 74px; height: 74px; }
-  .pp__ph { font-size: 1.45rem; }
-  .pp__name { font-size: 0.85rem; }
-  .profile-menu__panel { max-height: 88vh; }
-  .site-footer { display: none; }
-}
 @media (prefers-reduced-motion: reduce) {
   .app__header { transition: none; }
 }
@@ -1018,23 +956,6 @@ body::after {
    выезжающая сверху шапка не перекрывала содержимое. Игровую страницу (.game)
    не трогаем — её раскладка настроена отдельно. Ширина ландшафтного телефона
    обычно > 560px, поэтому портретные правила (max-width:560) сюда не попадают. */
-@media (orientation: landscape) and (max-height: 600px), (orientation: landscape) and (pointer: coarse) and (max-width: 1000px) {
-  /* Item 6: не-игровые страницы начинаются ниже (под возможной шапкой). */
-  .auth, .profile, .legal, .lobby { margin-top: 3.2rem; }
-
-  /* Item 5: форма входа/регистрации шире. */
-  .auth { max-width: var(--content-w); }
-
-  /* Item 4: профиль и режим редактирования (общий контейнер) шире. */
-  .profile { max-width: var(--content-w); }
-
-  /* Item 4: карточка профиля после выхода (нет .profile__head) — ещё ниже. */
-  .profile:not(:has(.profile__head)) > .card { margin-top: 2vh; }
-
-  /* Главная в ландшафте — панель по центру, не у самого низа. */
-  .home { justify-content: center; padding-bottom: 0.5rem; }
-  .home__panel { margin-top: 0; margin-bottom: 0; }
-}
 
 /* ===== Пункт 7: уведомления над аватарами (мобильный ландшафт) + пауза ===== */
 
@@ -1050,30 +971,6 @@ body::after {
 @keyframes pp-note-in {
   from { opacity: 0; transform: translateY(4px); }
   to   { opacity: 1; transform: translateY(0); }
-}
-
-@media (orientation: landscape) and (max-height: 600px), (orientation: landscape) and (pointer: coarse) and (max-width: 1000px) {
-  /* Текстовый статус над доской прячем — сообщения уходят к аватарам.
-     Вступительный бросок (--opening, с кубиками) оставляем по центру. */
-  .game__status:not(.game__status--opening) { display: none; }
-
-  /* Баббл-уведомление над аватаром игрока. */
-  .pp__note {
-    display: block;
-    max-width: 12rem;
-    margin: 0 auto 0.4rem;
-    padding: 0.3rem 0.6rem;
-    border-radius: 10px;
-    font-size: 0.78rem; line-height: 1.2; text-align: center;
-    color: var(--cream);
-    background: rgba(20, 13, 7, 0.82);
-    border: 1px solid rgba(216, 184, 120, 0.4);
-    backdrop-filter: blur(4px);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
-    animation: pp-note-in 0.2s ease both;
-  }
-  /* Баббл игрока, чей сейчас ход — золотистая рамка (заметнее). */
-  .game__p.is-active .pp__note { border-color: rgba(216, 184, 120, 0.75); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1267,27 +1164,6 @@ body::after {
    Этот блок стоит ПОСЛЕ @media (max-width:820) намеренно — чтобы переопределить
    его правила для узких телефонов в ландшафте (иначе там показывались бы
    центральные мобильные кнопки, а не стойка в панели игрока). */
-@media (orientation: landscape) and (max-height: 600px), (orientation: landscape) and (pointer: coarse) and (max-width: 1000px) {
-  /* Стойка кнопок игрока (выход → чат → настройки) всегда в панели сбоку. */
-  .pp__gear, .pp__finish, .pp__chat { display: inline-grid; width: 34px; height: 34px; font-size: 1.02rem; }
-  .game__gear-mobile, .game__finish-mobile { display: none; }
-
-  /* Окно чата под доской убрано — фразы выбираются иконкой чата → модалкой,
-     сообщение всплывает облачком под аватаром отправителя. Освободившееся
-     место отдаём доске (крупнее, чем было 75vh). */
-  .game__chat { display: none; }
-  .game__board .bd-wrap { width: 84vh; height: 84vh; max-width: 84vh; max-height: 84vh; }
-
-  /* Облачко чата под именем отправителя. */
-  .pp__chat-bubble {
-    display: block; max-width: 12rem; margin: 0.35rem auto 0;
-    padding: 0.3rem 0.6rem; border-radius: 12px;
-    font-size: 0.78rem; line-height: 1.2; text-align: center;
-    background: linear-gradient(180deg, #eac877, #c79a3e); color: #2a1d10; font-weight: 600;
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
-    animation: pp-note-in 0.2s ease both;
-  }
-}
 
 /* =========================================================================
    Форма «Контакты» (ContactsPage). Тёмный стиль сайта, кастомный дропдаун,
@@ -1365,6 +1241,18 @@ body::after {
 .gover__actions { display: flex; gap: 0.6rem; justify-content: center; flex-wrap: wrap; }
 .gover__actions .btn { min-width: 120px; }
 
+/* Вариант поражения — холодная гамма, без золота. */
+.gover--loss .gover__title { color: #cdd5df; font-size: 1.7rem; letter-spacing: 1px; }
+.gover--loss .gover__subtitle { opacity: 0.8; }
+.gover__cup--loss { animation: gover-cup-loss-in 0.55s cubic-bezier(0.3, 0.8, 0.4, 1.05) both; }
+@keyframes gover-cup-loss-in {
+  from { transform: translateY(-8px) rotate(-14deg) scale(0.6); opacity: 0; }
+  to   { transform: translateY(0) rotate(0deg) scale(1); opacity: 1; }
+}
+/* Рейтинг при поражении — холодная рамка; отрицательная дельта красновата. */
+.gover--loss .gover__rating { background: rgba(120, 132, 148, 0.12); border-color: rgba(150, 162, 178, 0.35); }
+.gover__rating-delta.is-neg { color: #e79a9a; }
+
 /* =========================================================================
    Красивый скролл в списке фраз чата (выпадающий список + модалка выбора).
    Золото/дерево под дизайн сайта. WebKit (Chrome/Safari) + Firefox. */
@@ -1418,3 +1306,55 @@ body::after {
   background-clip: padding-box;
 }
 *::-webkit-scrollbar-corner { background: transparent; }
+
+/* =====================  Страница «Рейтинги» (таблица лидеров)  ===================== */
+.ratings { width: 100%; max-width: var(--maxw, 1100px); margin: 4vh auto 0; padding: 0 0.5rem; }
+.ratings__head {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  flex-wrap: wrap; margin-bottom: 1.1rem;
+}
+.ratings__title { color: var(--wood-light); font-size: 1.6rem; margin: 0; }
+.ratings__hint { opacity: 0.7; margin: 1.2rem 0; }
+.ratings__table-wrap {
+  overflow-x: auto; border-radius: 14px;
+  border: 1px solid rgba(216, 184, 120, 0.22);
+  background: rgba(10, 6, 3, 0.55); backdrop-filter: blur(6px);
+}
+.ratings__table { width: 100%; border-collapse: collapse; min-width: 520px; }
+.ratings__table thead th {
+  text-align: left; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--wood-light); opacity: 0.85; font-weight: 700;
+  padding: 0.7rem 0.9rem; border-bottom: 1px solid rgba(216, 184, 120, 0.22);
+  white-space: nowrap;
+}
+.ratings__c-num { text-align: right; }
+.ratings__c-rank { width: 48px; text-align: center; }
+.ratings__table tbody td { padding: 0.6rem 0.9rem; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+.ratings__row:hover { background: rgba(216, 184, 120, 0.06); }
+.ratings__row.is-me { background: rgba(184, 134, 47, 0.14); }
+.ratings__row.is-me:hover { background: rgba(184, 134, 47, 0.2); }
+.ratings__rank {
+  display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%;
+  font-weight: 800; font-size: 0.85rem; color: var(--cream);
+  background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.ratings__row--top1 .ratings__rank { background: linear-gradient(180deg, #ffe07a, #d9a325); color: #2a1d10; border-color: transparent; }
+.ratings__row--top2 .ratings__rank { background: linear-gradient(180deg, #e6e9ef, #a9b2be); color: #22262c; border-color: transparent; }
+.ratings__row--top3 .ratings__rank { background: linear-gradient(180deg, #edb27e, #b3743c); color: #2a1810; border-color: transparent; }
+.ratings__player { display: flex; align-items: center; gap: 0.7rem; }
+.ratings__ava {
+  flex: 0 0 auto; width: 38px; height: 38px; border-radius: 50%; overflow: hidden;
+  display: grid; place-items: center; font-weight: 700; color: var(--wood-light);
+  background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(216, 184, 120, 0.35);
+}
+.ratings__ava img { width: 100%; height: 100%; object-fit: cover; }
+.ratings__names { display: flex; flex-direction: column; line-height: 1.2; }
+.ratings__names strong { color: var(--text); font-size: 0.98rem; }
+.ratings__uname { color: var(--wood-light); opacity: 0.7; font-size: 0.8rem; }
+.ratings__rating { font-weight: 800; color: var(--accent); font-size: 1.02rem; }
+
+@media (max-width: 560px) {
+  .ratings__table { min-width: 340px; }
+  .ratings__c-opt { display: none; } /* на узких экранах прячем «Игры»/«Победы» */
+  .ratings__ava { width: 32px; height: 32px; }
+}

@@ -13,6 +13,7 @@ export default function HomePage() {
         <p className="home__subtitle">Классические и длинные нарды — онлайн и с ботом</p>
         <nav className="home__actions" aria-label="Основная навигация">
           <Link className="btn btn--ghost" to="/">Главная</Link>
+          <Link className="btn btn--ghost" to="/ratings">Рейтинги</Link>
           <Link className="btn btn--primary" to="/play">Быстрая игра с ботом</Link>
           <Link className="btn" to="/lobby">Играть онлайн</Link>
           {auth.user ? (

@@ -5,6 +5,7 @@ import PlayPage from './pages/PlayPage';
 import LobbyPage from './pages/LobbyPage';
 import TablePage from './pages/TablePage';
 import ProfilePage from './pages/ProfilePage';
+import RatingsPage from './pages/RatingsPage';
 import FriendsPage from './pages/FriendsPage';
 import AuthPage from './pages/AuthPage';
 import PrivacyPage from './pages/PrivacyPage';
@@ -46,6 +47,7 @@ export default function App() {
     { to: '/', label: 'Главная', hideMobile: true },
     { to: '/play', label: 'Игра с ботом', hideMobile: true },
     { to: '/lobby', label: 'Игра онлайн', hideMobile: true },
+    { to: '/ratings', label: 'Рейтинги', hideMobile: true },
     ...(user ? [] : [{ to: '/auth', label: 'Вход' }]),
   ];
 
@@ -94,6 +96,7 @@ export default function App() {
           <Route path="/table/:id" element={<TablePage />} />
           <Route path="/friends" element={<FriendsPage />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/ratings" element={<RatingsPage />} />
           <Route path="/auth" element={<AuthPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/terms" element={<TermsPage />} />

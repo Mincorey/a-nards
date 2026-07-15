@@ -120,6 +120,28 @@ export async function setReady(id: string, ready: boolean): Promise<void> {
   await supabase.from('table_seats').update({ is_ready: ready }).eq('table_id', id).eq('user_id', uid);
 }
 
+export interface LeaderboardRow {
+  id: string;
+  username: string;
+  display_name: string;
+  avatar_url: string | null;
+  rating: number;
+  games_played: number;
+  games_won: number;
+}
+
+/** Таблица лидеров: все игроки по убыванию рейтинга (для страницы «Рейтинги»). */
+export async function fetchLeaderboard(limit = 200): Promise<LeaderboardRow[]> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, username, display_name, avatar_url, rating, games_played, games_won')
+    .order('rating', { ascending: false })
+    .order('games_won', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as LeaderboardRow[];
+}
+
 /** Текущий рейтинг авторизованного игрока (для показа прироста после победы). */
 export async function fetchMyRating(): Promise<number | null> {
   const { data: u } = await supabase.auth.getUser();
@@ -152,6 +174,8 @@ async function invoke<T>(fn: string, body: Record<string, unknown>): Promise<T> 
 export const startGame = (table_id: string) => invoke<{ game: GameRow }>('start-game', { table_id });
 export const rollDice = (game_id: string) => invoke<{ game: GameRow }>('roll-dice', { game_id });
 export const playMove = (game_id: string, move: Move) => invoke<{ game: GameRow }>('play-move', { game_id, move });
+/** Пропустить ход, когда у ходящего нет доступных ходов (после показа костей). */
+export const passTurn = (game_id: string) => invoke<{ game: GameRow }>('pass-turn', { game_id });
 
 /** Подписка на изменения стола: места, статус стола, партия. topic разводит каналы. */
 export function subscribeTable(

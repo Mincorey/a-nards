@@ -1,8 +1,13 @@
 /* roll-dice — серверный бросок кубиков текущего игрока.
    Криптостойкий ГСЧ (secureRng) — броски НЕ предсказуемы клиентом (аудит H2).
-   Оптимистичная блокировка по updated_at (аудит M4) — защита от двойного броска. */
+   Оптимистичная блокировка по updated_at (аудит M4) — защита от двойного броска.
+   ВАЖНО (п.5): при ОТСУТСТВИИ ходов сервер БОЛЬШЕ НЕ делает авто-пас в этом же
+   ответе. Раньше он тут же вызывал endTurn и возвращал уже «пропущенное»
+   состояние — из-за чего оба игрока не видели, что именно выпало (анимация
+   броска не показывалась, ход просто перескакивал). Теперь сервер возвращает
+   брошенное состояние (кости видны), а пропуск хода делает клиент ходящего
+   отдельным вызовом pass-turn после показа костей. */
 import * as E from '../_shared/core.ts';
-import { allowedMoves } from '../_shared/rules.ts';
 import { admin, requireUser, json, corsHeaders, HttpError, errToResponse, secureRng } from '../_shared/util.ts';
 import type { GameState } from '../_shared/types.ts';
 
@@ -29,25 +34,13 @@ Deno.serve(async (req) => {
     const rev = game.updated_at as string;
     E.startTurn(state, secureRng);
 
-    let ply = game.ply;
-    const noMoves = allowedMoves(state).length === 0;
-    const passRoll = state.rolled;
-    if (noMoves) {
-      E.endTurn(state);
-      ply += 1;
-    }
-
-    // Защищённый апдейт (оптимистичная блокировка) — до записи авто-паса.
+    // Пас (endTurn) НЕ делаем — даже если ходов нет. Сохраняем брошенное
+    // состояние (ход остаётся за текущим игроком), кости видны обоим.
     const { data: updated, error } = await db.from('games').update({
-      state, turn: state.turn, dice: state.dice, rolled: state.rolled, ply,
+      state, turn: state.turn, dice: state.dice, rolled: state.rolled, ply: game.ply,
     }).eq('id', game_id).eq('updated_at', rev).select().maybeSingle();
     if (error) throw new HttpError(500, error.message);
     if (!updated) throw new HttpError(409, 'Состояние партии изменилось — обновите и повторите');
-
-    // Нет ходов — фиксируем авто-пас в журнале уже после успешного апдейта.
-    if (noMoves) {
-      await db.from('moves').insert({ game_id, player_id: user.id, ply: game.ply, roll: passRoll, moves: [] });
-    }
 
     return json({ game: updated }, 200, req);
   } catch (e) {
