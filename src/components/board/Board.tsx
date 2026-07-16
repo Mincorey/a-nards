@@ -8,6 +8,7 @@ import {
 import Dice3D, { OpeningDie } from './Dice3D';
 import { IconDice } from '../icons';
 import './board.css';
+import { playChecker } from '../../lib/sound';
 
 const BOARD_IMG = '/assets/board.png';
 const WHITE_IMG = '/assets/fishka_white.png';
@@ -236,7 +237,7 @@ export default function Board({
       // перелёт из аутфилда к центру выглядит как «фантомная фишка, летящая с
       // противоположной стороны доски». Не анимируем — фишка просто появится в
       // лотке (bd-off--enter). Обычный вынос из дома анимируется как прежде.
-      if (dst.loc === 'off' && typeof src.loc === 'number' && !isHomeIdx(src.color, src.loc)) return;
+      if (dst.loc === 'off' && typeof src.loc === 'number' && !isHomeIdx(src.color, src.loc)) { playChecker(); return; }
       const from = slotPos(src.loc, src.color, before.get(src.key)!, points, viewer);
       const to = slotPos(dst.loc, dst.color, after.get(dst.key)!, points, viewer);
       const isMine = myColor != null && src.color === myColor;
@@ -311,7 +312,10 @@ export default function Board({
   useEffect(() => {
     if (!flight || flight.phase !== 'go') return;
     const id = flight.id;
-    const t = window.setTimeout(() => setFlight((f) => (f && f.id === id ? null : f)), flight.duration + 60);
+    const t = window.setTimeout(() => {
+      playChecker(); // «стук» фишки о доску в момент приземления
+      setFlight((f) => (f && f.id === id ? null : f));
+    }, flight.duration + 60);
     return () => window.clearTimeout(t);
   }, [flight]);
 

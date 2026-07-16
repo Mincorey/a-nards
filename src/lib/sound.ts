@@ -46,3 +46,26 @@ export function playVictory(): void {
     /* воспроизведение звука не критично */
   }
 }
+
+let checkerAudio: HTMLAudioElement | null = null;
+
+/**
+ * Проигрывает звук постановки шашки на доску (public/sound/checker.mp3) — короткий
+ * «стук» фишки о доску. Вызывается в момент ПРИЗЕМЛЕНИЯ шашки в любой партии
+ * (с ботом и в онлайне), для ходов игрока, соперника и бота одинаково.
+ * Гейтится тем же тумблером игровых звуков, что и кости.
+ */
+export function playChecker(): void {
+  if (typeof window === 'undefined' || typeof Audio === 'undefined') return;
+  if (!isDiceSoundEnabled()) return;
+  try {
+    if (!checkerAudio) {
+      checkerAudio = new Audio('/sound/checker.mp3');
+      checkerAudio.preload = 'auto';
+    }
+    checkerAudio.currentTime = 0;
+    void checkerAudio.play().catch(() => { /* автоплей до первого жеста / нет звука */ });
+  } catch {
+    /* воспроизведение звука не критично */
+  }
+}
