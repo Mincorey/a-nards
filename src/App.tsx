@@ -22,6 +22,8 @@ import { useNavGuardRef } from './lib/navGuard';
 
 export default function App() {
   const { pathname } = useLocation();
+  // На странице активного стола доска рассчитана на ландшафт — там НЕ блокируем.
+  const onTable = pathname.startsWith('/table/');
   const navigate = useNavigate();
   const { user } = useAuth();
   const guard = useNavGuardRef();
@@ -118,6 +120,18 @@ export default function App() {
         onConfirm={confirmLeave}
         onCancel={() => setPendingTo(null)}
       />
+
+      {/* Блокировка ландшафта на телефонах (кроме игрового стола). Показывается
+          только по media-запросу orientation:landscape + низкая высота экрана. */}
+      {!onTable && (
+        <div className="rotate-gate" aria-hidden="true">
+          <div className="rotate-gate__box">
+            <div className="rotate-gate__icon">📱</div>
+            <p className="rotate-gate__title">Поверните телефон вертикально</p>
+            <p className="rotate-gate__sub">A‑NARDS работает в портретной ориентации</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

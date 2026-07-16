@@ -22,11 +22,13 @@
    Принудительно наследуем Montserrat (из :root) во всём вводе. */
 input, select, textarea, button, optgroup, option { font-family: inherit; }
 html, body, #root { height: 100%; margin: 0; }
+html { background-color: #241710; } /* тёмная база: системная панель жестов снизу не белеет */
 body {
   color: var(--text);
   background:
     radial-gradient(1200px 600px at 50% -10%, #5a3f25 0%, transparent 60%),
     linear-gradient(160deg, var(--wood-dark), #241710);
+  background-color: #241710;
   min-height: 100dvh;
   -webkit-text-size-adjust: 100%;
 }
@@ -1356,6 +1358,7 @@ body::after {
   display: grid; place-items: center; font-weight: 700; color: var(--wood-light);
   background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(216, 184, 120, 0.35);
 }
+.ratings__ava img { width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; }
 .ratings__names { display: flex; flex-direction: column; line-height: 1.2; }
 .ratings__names strong { color: var(--text); font-size: 0.98rem; }
 .ratings__uname { color: var(--wood-light); opacity: 0.7; font-size: 0.8rem; }
@@ -1454,3 +1457,37 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 .field__hint { font-size: 0.78rem; opacity: 0.7; margin-top: 0.15rem; }
 /* Телефон в шапке профиля (режим просмотра) */
 .profile__phone { margin: 0.1rem 0 0; opacity: 0.85; font-size: 0.9rem; }
+
+/* ===== Блокировка ЛАНДШАФТА на телефонах (2026-07-17). Оверлей рендерится в
+   App.tsx на всех страницах, кроме активного стола. Показываем только на
+   сенсорных устройствах в ландшафте с низкой высотой экрана (телефоны). ===== */
+.rotate-gate { display: none; }
+@media (orientation: landscape) and (max-height: 500px) and (pointer: coarse) {
+  .rotate-gate {
+    display: flex; position: fixed; inset: 0; z-index: 100000;
+    align-items: center; justify-content: center; text-align: center; padding: 1.5rem;
+    background: linear-gradient(160deg, var(--wood-dark), #241710); color: var(--text);
+  }
+  .rotate-gate__box { max-width: 340px; display: grid; gap: 0.45rem; justify-items: center; }
+  .rotate-gate__icon { font-size: 2.6rem; animation: rotate-hint 2.2s ease-in-out infinite; }
+  .rotate-gate__title { margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--accent); }
+  .rotate-gate__sub { margin: 0; opacity: 0.82; font-size: 0.9rem; }
+}
+@keyframes rotate-hint { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-90deg); } }
+
+/* ===== Рейтинги на узких экранах: ужимаем, чтобы столбцы влезли без гориз.
+   прокрутки (Моб-3). Идёт ПОСЛЕ базового блока 560px — переопределяет min-width. ===== */
+@media (max-width: 560px) {
+  .ratings { padding: 0 0.25rem; }
+  .ratings__table { min-width: 0; font-size: 0.8rem; }
+  .ratings__table thead th { padding: 0.5rem 0.4rem; font-size: 0.6rem; letter-spacing: 0.02em; }
+  .ratings__table tbody td { padding: 0.45rem 0.4rem; }
+  .ratings__table th.ratings__c-rank,
+  .ratings__table td.ratings__c-rank { width: 30px; }
+  .ratings__rank { width: 22px; height: 22px; font-size: 0.72rem; }
+  .ratings__ava { width: 28px; height: 28px; }
+  .ratings__player { gap: 0.45rem; min-width: 0; }
+  .ratings__names { min-width: 0; }
+  .ratings__names strong { font-size: 0.82rem; max-width: 42vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ratings__rating { font-size: 0.88rem; }
+}
