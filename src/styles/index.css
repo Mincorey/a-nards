@@ -16,7 +16,10 @@
   font-family: 'Montserrat', system-ui, 'Segoe UI', Roboto, Arial, sans-serif;
 }
 
-* { box-sizing: border-box; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+/* Убираем синий «квадрат» подсветки тапа на мобильных (Android/iOS Chrome).
+   Видимый фокус для клавиатуры остаётся через :focus-visible (ниже). */
+html { -webkit-tap-highlight-color: transparent; }
 /* Форм-контролы и кнопки по умолчанию НЕ наследуют шрифт страницы (берут
    системный) — из-за этого поля ввода/списки/кнопки оставались на старом шрифте.
    Принудительно наследуем Montserrat (из :root) во всём вводе. */
@@ -777,7 +780,7 @@ body::after {
   .home__panel { margin-top: 0; }
 
   /* Футер выше и компактнее — без лишнего зазора и прокрутки. */
-  .site-footer { margin-top: 0; padding: 1rem 1rem 0.9rem; }
+  .site-footer { margin-top: 0; padding: 1rem 1rem max(0.9rem, calc(env(safe-area-inset-bottom) + 0.3rem)); }
   .site-footer__bottom { margin-top: 0.9rem; padding-top: 0.7rem; }
 
   /* Страница auth: фрейм во всю ширину окна, чуть ниже надписи A-NARDS
@@ -890,7 +893,9 @@ body::after {
      просвечивания картинки на пограничных высотах экрана. */
   background: rgba(10, 6, 3, 0.75);
   backdrop-filter: blur(6px);
-  padding: 1.6rem 1rem 1.2rem;
+  /* Нижний паддинг с учётом системной панели жестов (safe-area) — тёмный фон
+     футера заходит под панель, чтобы снизу не белела полоса. */
+  padding: 1.6rem 1rem max(1.2rem, calc(env(safe-area-inset-bottom) + 0.4rem));
 }
 .site-footer__inner {
   max-width: var(--maxw); margin: 0 auto;
