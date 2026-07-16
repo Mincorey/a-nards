@@ -60,15 +60,14 @@ export default function RatingsPage() {
                   <tr key={r.id} className={'ratings__row' + medal + (me ? ' is-me' : '')}>
                     <td className="ratings__c-rank"><span className="ratings__rank">{rank}</span></td>
                     <td className="ratings__c-player">
-                      <span className="ratings__player">
+                      <Link className="ratings__player ratings__player--link" to={`/player/${r.id}`} title="Открыть профиль игрока">
                         <span className="ratings__ava">
                           {r.avatar_url ? <img src={r.avatar_url} alt="" /> : initial}
                         </span>
                         <span className="ratings__names">
                           <strong>{r.display_name}{me ? ' (вы)' : ''}</strong>
-                          <span className="ratings__uname">@{r.username}</span>
                         </span>
-                      </span>
+                      </Link>
                     </td>
                     <td className="ratings__c-num ratings__rating">{r.rating}</td>
                     <td className="ratings__c-num ratings__c-opt">{r.games_played}</td>

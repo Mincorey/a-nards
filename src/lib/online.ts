@@ -12,13 +12,14 @@ export interface TableListItem extends GameTable {
   seats: { count: number }[];
 }
 
-/** Открытые публичные столы в ожидании игроков. */
+/** Столы в ожидании игроков — и открытые, и приватные (приватные показываем в
+ * лобби с «замком», вход по паролю). Пароль в выборку не попадает (лежит в
+ * защищённой table_secrets). RLS отдаёт приватные waiting-столы авторизованным. */
 export async function listOpenTables(): Promise<TableListItem[]> {
   const { data, error } = await supabase
     .from('game_tables')
     .select('*, owner:profiles!owner_id(display_name, username), seats:table_seats(count)')
     .eq('status', 'waiting')
-    .eq('visibility', 'public')
     .eq('quick', false)
     .order('created_at', { ascending: false })
     .limit(50);
@@ -26,7 +27,31 @@ export async function listOpenTables(): Promise<TableListItem[]> {
   return (data ?? []) as unknown as TableListItem[];
 }
 
-export interface CreateTableInput { name: string; variant: Variant; visibility: Visibility; quick?: boolean; }
+/** Режим стола: обычная игра или игра на внутриигровые монеты (COINS). */
+export type TableMode = 'normal' | 'coins';
+
+export interface CreateTableInput {
+  name: string;
+  variant: Variant;
+  visibility: Visibility;
+  quick?: boolean;
+  /** Режим стола. По умолчанию 'normal'. */
+  mode?: TableMode;
+  /** Ставка входа в COINS (только для mode='coins'). */
+  coins?: number;
+  /** Пароль приватного стола (только для visibility='private'). */
+  password?: string;
+}
+
+/** Режим стола из settings (обычный по умолчанию). */
+export function tableMode(t: Pick<GameTable, 'settings'>): TableMode {
+  return (t.settings?.mode === 'coins' ? 'coins' : 'normal');
+}
+/** Ставка COINS из settings (0, если не задана). */
+export function tableCoins(t: Pick<GameTable, 'settings'>): number {
+  const c = t.settings?.coins;
+  return typeof c === 'number' && c > 0 ? c : 0;
+}
 
 /** Создать стол и сесть владельцем (место 0, белые). */
 export async function createTable(input: CreateTableInput): Promise<GameTable> {
@@ -34,11 +59,34 @@ export async function createTable(input: CreateTableInput): Promise<GameTable> {
   const uid = u.user?.id;
   if (!uid) throw new Error('Не авторизован');
 
+  const mode: TableMode = input.mode === 'coins' ? 'coins' : 'normal';
+  const settings: Record<string, unknown> = { mode };
+  if (mode === 'coins') settings.coins = Math.max(0, Math.floor(input.coins ?? 0));
+
   const { data: table, error } = await supabase
     .from('game_tables')
-    .insert({ owner_id: uid, name: input.name, variant: input.variant, visibility: input.visibility, quick: input.quick ?? false })
+    .insert({
+      owner_id: uid,
+      name: input.name,
+      variant: input.variant,
+      visibility: input.visibility,
+      quick: input.quick ?? false,
+      settings,
+    })
     .select().single();
   if (error) throw error;
+
+  // Пароль приватного стола храним в отдельной защищённой таблице table_secrets
+  // (клиенты её не читают — проверку делает серверная RPC join_table_secure).
+  if (input.visibility === 'private' && input.password) {
+    const { error: pwErr } = await supabase.from('table_secrets')
+      .insert({ table_id: table.id, password: input.password });
+    if (pwErr) {
+      // Если секрет не записался — стол без защиты бесполезен; откатываем его.
+      await supabase.from('game_tables').delete().eq('id', table.id);
+      throw pwErr;
+    }
+  }
 
   const { error: seatErr } = await supabase.from('table_seats')
     .insert({ table_id: table.id, user_id: uid, seat: 0, color: 'w', is_ready: true });
@@ -106,6 +154,27 @@ export async function joinTable(id: string): Promise<void> {
   if (error) throw error;
 }
 
+/**
+ * Безопасный вход за стол через серверную RPC. Для приватного стола сервер сам
+ * сверяет пароль с table_secrets (клиент пароль не видит), проверяет число мест
+ * и сажает игрока вторым (чёрные). Для открытого стола пароль не нужен.
+ * Бросает Error с понятным текстом при неверном пароле/занятом столе.
+ */
+export async function joinTableSecure(id: string, password?: string): Promise<void> {
+  const { data: u } = await supabase.auth.getUser();
+  if (!u.user?.id) throw new Error('Не авторизован');
+  const { error } = await supabase.rpc('join_table_secure', {
+    p_table: id,
+    p_password: password ?? null,
+  });
+  if (error) {
+    const m = error.message || '';
+    if (/password/i.test(m)) throw new Error('Неверный пароль');
+    if (/full|occupied|занят/i.test(m)) throw new Error('Стол занят');
+    throw new Error(m || 'Не удалось присоединиться');
+  }
+}
+
 export async function leaveTable(id: string): Promise<void> {
   const { data: u } = await supabase.auth.getUser();
   const uid = u.user?.id;
@@ -140,6 +209,17 @@ export async function fetchLeaderboard(limit = 200): Promise<LeaderboardRow[]> {
     .limit(limit);
   if (error) throw error;
   return (data ?? []) as LeaderboardRow[];
+}
+
+/** Публичный профиль игрока по id (для просмотра из таблицы рейтингов). */
+export async function fetchProfileById(id: string): Promise<LeaderboardRow | null> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, username, display_name, avatar_url, rating, games_played, games_won')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as LeaderboardRow) ?? null;
 }
 
 /** Текущий рейтинг авторизованного игрока (для показа прироста после победы). */

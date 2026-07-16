@@ -6,6 +6,7 @@ import LobbyPage from './pages/LobbyPage';
 import TablePage from './pages/TablePage';
 import ProfilePage from './pages/ProfilePage';
 import RatingsPage from './pages/RatingsPage';
+import PlayerProfilePage from './pages/PlayerProfilePage';
 import FriendsPage from './pages/FriendsPage';
 import AuthPage from './pages/AuthPage';
 import PrivacyPage from './pages/PrivacyPage';
@@ -97,6 +98,7 @@ export default function App() {
           <Route path="/friends" element={<FriendsPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/ratings" element={<RatingsPage />} />
+          <Route path="/player/:id" element={<PlayerProfilePage />} />
           <Route path="/auth" element={<AuthPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/terms" element={<TermsPage />} />

@@ -1327,8 +1327,13 @@ body::after {
   padding: 0.7rem 0.9rem; border-bottom: 1px solid rgba(216, 184, 120, 0.22);
   white-space: nowrap;
 }
-.ratings__c-num { text-align: right; }
-.ratings__c-rank { width: 48px; text-align: center; }
+/* Числовые колонки: и ЗАГОЛОВОК, и значения выравниваем ОДИНАКОВО (по центру),
+   чтобы число стояло ровно под названием столбца. Двойной селектор th/td с
+   .ratings__table поднимает специфичность выше правила `thead th{text-align:left}`. */
+.ratings__table th.ratings__c-num,
+.ratings__table td.ratings__c-num { text-align: center; }
+.ratings__table th.ratings__c-rank,
+.ratings__table td.ratings__c-rank { width: 48px; text-align: center; }
 .ratings__table tbody td { padding: 0.6rem 0.9rem; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
 .ratings__row:hover { background: rgba(216, 184, 120, 0.06); }
 .ratings__row.is-me { background: rgba(184, 134, 47, 0.14); }
@@ -1347,7 +1352,6 @@ body::after {
   display: grid; place-items: center; font-weight: 700; color: var(--wood-light);
   background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(216, 184, 120, 0.35);
 }
-.ratings__ava img { width: 100%; height: 100%; object-fit: cover; }
 .ratings__names { display: flex; flex-direction: column; line-height: 1.2; }
 .ratings__names strong { color: var(--text); font-size: 0.98rem; }
 .ratings__uname { color: var(--wood-light); opacity: 0.7; font-size: 0.8rem; }
@@ -1358,3 +1362,53 @@ body::after {
   .ratings__c-opt { display: none; } /* на узких экранах прячем «Игры»/«Победы» */
   .ratings__ava { width: 32px; height: 32px; }
 }
+
+/* ===== Типы столов, COINS, фильтры лобби, бейджи, профиль игрока (2026-07-16) ===== */
+
+/* П2 — модалка «Выберите тип стола» */
+.type-choice__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-top: 0.4rem; }
+.type-choice__btn {
+  display: flex; flex-direction: column; align-items: center; gap: 0.35rem;
+  padding: 1.3rem 1rem; border-radius: 14px; cursor: pointer; text-align: center;
+  color: var(--text); background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(216, 184, 120, 0.28);
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+.type-choice__btn:hover { background: rgba(216, 184, 120, 0.12); border-color: var(--accent); transform: translateY(-1px); }
+.type-choice__btn strong { font-size: 1.05rem; }
+.type-choice__btn span:last-child { font-size: 0.8rem; opacity: 0.72; }
+.type-choice__ic { font-size: 1.8rem; line-height: 1; display: grid; place-items: center; height: 40px; }
+.type-choice__ic svg { width: 32px; height: 32px; }
+.type-choice__btn--coins { border-color: rgba(230, 190, 90, 0.5); }
+@media (max-width: 460px) { .type-choice__grid { grid-template-columns: 1fr; } }
+
+/* П4 — поле ставки COINS + пресеты */
+.setup__coins-input {
+  width: 100%; padding: 0.55rem 0.7rem; border-radius: 10px;
+  background: rgba(0, 0, 0, 0.3); color: var(--text);
+  border: 1px solid rgba(216, 184, 120, 0.3); font-size: 1rem;
+}
+.setup__coins-input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.setup__coins-presets { margin-top: 0.5rem; }
+.setup__pass { margin-top: 0.6rem; }
+
+/* П6 — фильтры и бейджи столов */
+.lobby__filters { margin: 0 0 0.9rem; }
+.table-row__badges { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.35rem; }
+.badge {
+  font-size: 0.72rem; padding: 0.15rem 0.5rem; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--cream); white-space: nowrap;
+}
+.badge--coins { background: rgba(230, 190, 90, 0.18); border-color: rgba(230, 190, 90, 0.45); color: #f4d98a; }
+.badge--lock { background: rgba(120, 120, 140, 0.18); border-color: rgba(160, 160, 180, 0.35); }
+
+/* П6 — модалки входа за стол за COINS */
+.coins-info p { margin: 0 0 0.6rem; font-size: 0.92rem; line-height: 1.4; }
+.coins-confirm { list-style: none; margin: 0.4rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.4rem; }
+.coins-confirm li { display: flex; justify-content: space-between; gap: 1rem; padding: 0.45rem 0.7rem; border-radius: 8px; background: rgba(255, 255, 255, 0.05); }
+.coins-confirm li span { opacity: 0.7; }
+
+/* П7b — кликабельное имя игрока в таблице рейтингов */
+.ratings__player--link { text-decoration: none; color: inherit; border-radius: 8px; transition: background 0.12s; }
+.ratings__player--link:hover .ratings__names strong { color: var(--accent); text-decoration: underline; }

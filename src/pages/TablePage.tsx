@@ -252,7 +252,11 @@ export default function TablePage() {
             <div className="game__wait card">
               {!full ? (
                 <>
-                  <p>Ждём второго игрока. Пригласите друга или дождитесь соперника из лобби.</p>
+                  <p>
+                    {data.table.visibility === 'private'
+                      ? 'Ждём второго игрока. Сообщите пароль сопернику — он введёт его в лобби и сядет за стол.'
+                      : 'Ждём второго игрока. Пригласите друга или дождитесь соперника из лобби.'}
+                  </p>
                   {mySeat && (
                     <>
                       <button className="btn" onClick={openInvite}>Пригласить друга</button>
