@@ -5,6 +5,7 @@ import { validateUsername, winRate } from '../lib/username';
 import ConfirmModal from '../components/ConfirmModal';
 import { IconPencil } from '../components/icons';
 import { WALLET_BALANCE_RUB, formatRub } from '../lib/wallet';
+import { formatRuPhone, ruPhoneToE164 } from '../lib/phone';
 
 export default function ProfilePage() {
   const auth = useAuth();
@@ -13,6 +14,7 @@ export default function ProfilePage() {
   const [editing, setEditing] = useState(false);
   const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [phone, setPhone] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmOut, setConfirmOut] = useState(false);
@@ -39,6 +41,7 @@ export default function ProfilePage() {
   function startEdit() {
     setUsername(p?.username ?? '');
     setDisplayName(p?.display_name ?? '');
+    setPhone(p?.phone ? formatRuPhone(p.phone) : '');
     setError(null);
     setEditing(true);
   }
@@ -49,9 +52,15 @@ export default function ProfilePage() {
     if (!u.ok) { setError(u.error ?? 'Некорректный username'); return; }
     if (!displayName.trim()) { setError('Укажите отображаемое имя'); return; }
     if (displayName.trim().length > 40) { setError('Отображаемое имя — не длиннее 40 символов'); return; }
+    let phoneVal: string | null = null;
+    if (phone.trim()) {
+      const e164 = ruPhoneToE164(phone);
+      if (!e164) { setError('Введите номер телефона полностью: +7 (XXX) XXX-XX-XX'); return; }
+      phoneVal = e164;
+    }
     setBusy(true);
     try {
-      await auth.updateProfile({ username: username.trim(), display_name: displayName.trim() });
+      await auth.updateProfile({ username: username.trim(), display_name: displayName.trim(), phone: phoneVal });
       setEditing(false);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Ошибка сохранения';
@@ -98,6 +107,7 @@ export default function ProfilePage() {
                 <h1>{p?.display_name ?? '—'}</h1>
                 <p className="profile__uname">@{p?.username ?? '—'}</p>
                 <p className="profile__email">{auth.user.email}</p>
+                {p?.phone && <p className="profile__phone">{formatRuPhone(p.phone)}</p>}
               </>
             ) : (
               <div className="profile__edit">
@@ -108,6 +118,12 @@ export default function ProfilePage() {
                 <label className="field">
                   <span>Username (латиница, цифры, _)</span>
                   <input value={username} onChange={(e) => setUsername(e.target.value)} />
+                </label>
+                <label className="field">
+                  <span>Телефон</span>
+                  <input type="tel" inputMode="tel" value={phone} placeholder="+7 (___) ___-__-__"
+                    onChange={(e) => setPhone(formatRuPhone(e.target.value))} />
+                  <span className="field__hint">Нужен для вывода средств из внутриигрового кошелька.</span>
                 </label>
               </div>
             )}

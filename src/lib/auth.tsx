@@ -18,6 +18,7 @@ export interface Profile {
   username: string;
   display_name: string;
   avatar_url: string | null;
+  phone: string | null;
   rating: number;
   games_played: number;
   games_won: number;
@@ -38,7 +39,7 @@ interface AuthContextValue {
   signOut: () => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
   refreshProfile: () => Promise<void>;
-  updateProfile: (patch: Partial<Pick<Profile, 'username' | 'display_name' | 'avatar_url'>>) => Promise<void>;
+  updateProfile: (patch: Partial<Pick<Profile, 'username' | 'display_name' | 'avatar_url' | 'phone'>>) => Promise<void>;
   uploadAvatar: (file: File) => Promise<string>;
 }
 
