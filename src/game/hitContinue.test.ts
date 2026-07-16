@@ -1,110 +1,58 @@
 /* =============================================================================
- * hitContinue.test.ts — Проверка задачи 6: после удара шашкой в своей зоне
- * игрок должен иметь право продолжить ход ЭТОЙ ЖЕ шашкой, если такое
- * продолжение легально и входит в максимальную последовательность.
+ * hitContinue.test.ts — Домашнее правило (обновлено): после УДАРА шашкой в
+ * СВОЁМ ДОМЕ эта шашка больше НЕ может ходить обычным ходом до конца хода —
+ * разрешён ТОЛЬКО вынос ('off'), если он вообще возможен.
  *
- * Тест перебирает множество случайных позиций коротких нард. Для каждой:
- *  1) находит максимальные последовательности ходов;
- *  2) выбирает те, где ПЕРВЫЙ ход — это УДАР (бьёт блот соперника) в своём доме;
- *  3) применяет удар и убеждается, что следующий ход ТОЙ ЖЕ шашкой (from == to
- *     удара) действительно предлагается в allowedMoves/targetsFrom, если он
- *     присутствует в какой-либо максимальной последовательности.
+ * (Раньше правило было обратным — «Задача 6» разрешала продолжение той же
+ * шашкой; по требованию игроков поведение изменено на противоположное.)
  * ========================================================================== */
 import { describe, it, expect } from 'vitest';
 import * as S from '../engine/shortNardy';
-import { maximalSequences, allowedMoves, targetsFrom } from './rules';
-import type { GameState, Color } from '../engine/types';
+import { allowedMoves, targetsFrom } from './rules';
+import type { GameState } from '../engine/types';
 
-const sign = (c: Color) => (c === 'w' ? 1 : -1);
-const inHome = (c: Color, idx: number) => (c === 'w' ? idx >= 0 && idx <= 5 : idx >= 18 && idx <= 23);
+describe('Домашнее правило: удар в своём доме запирает побившую шашку', () => {
+  it('после удара в доме обычный ход той же шашкой НЕДОСТУПЕН (не все дома → и выноса нет)', () => {
+    // Белая на 5 бьёт чёрный блот на 2 (оба в доме белых 0..5). Есть белые вне
+    // дома (13) → вынос невозможен. Значит после удара шашка на 2 ЗАПЕРТА.
+    const pts = new Array(24).fill(0);
+    pts[5] = 1; pts[13] = 14; pts[2] = -1; pts[18] = -14;
+    const s: GameState = { pts, bar: { w: 0, b: 0 }, off: { w: 0, b: 0 }, turn: 'w', dice: [3, 2], rolled: [3, 2], variant: 'short' };
 
-// Детерминированный ГСЧ (LCG) — воспроизводимость.
-function makeRng(seed: number) {
-  let s = seed >>> 0;
-  return () => {
-    s = (s * 1664525 + 1013904223) >>> 0;
-    return s / 0xffffffff;
-  };
-}
+    S.applyMove(s, 5, 2, 3); // удар кубиком 3
+    expect(s.pts[2]).toBe(1);
+    expect(s.bar.b).toBe(1);
+    expect(s.hitLock).toContain(2);
 
-// Случайная валидная-ish позиция: раскидываем 15 белых и 15 чёрных по пунктам,
-// оставляя блоты, чтобы удары были возможны. Бар/офф — нули для простоты.
-function randomState(rng: () => number): GameState {
-  const pts = new Array<number>(24).fill(0);
-  const place = (color: Color) => {
-    let left = 15;
-    const sg = sign(color);
-    let guard = 0;
-    while (left > 0 && guard++ < 200) {
-      const idx = Math.floor(rng() * 24);
-      // не ставим поверх чужой стопки (>=2), чтобы позиция была легальной
-      if (pts[idx] * sg < -1) continue;
-      // если там чужой блот — оставим его (возможность удара), не кладём своих туда
-      if (pts[idx] * sg === -1) continue;
-      const add = 1 + Math.floor(rng() * Math.min(3, left));
-      pts[idx] += sg * add;
-      left -= add;
-    }
-    // если не всех разместили — досыпаем на первый попавшийся свой/пустой
-    for (let i = 0; i < 24 && left > 0; i++) {
-      if (pts[i] * sg >= 0) { pts[i] += sg; left--; }
-    }
-  };
-  place('w');
-  place('b');
-  return { pts, bar: { w: 0, b: 0 }, off: { w: 0, b: 0 }, turn: 'w', dice: [], rolled: null, variant: 'short' } as GameState;
-}
+    const from2 = targetsFrom(s, 2);
+    expect(from2.length, 'из побившей шашки (2) не должно быть ходов').toBe(0);
+    expect(allowedMoves(s).some((m) => m.from === 13)).toBe(true);
+  });
 
-describe('Задача 6: продолжение хода побившей шашкой', () => {
-  it('удар в своей зоне не блокирует дальнейший ход той же шашкой', () => {
-    const rng = makeRng(12345);
-    let scenariosChecked = 0;
+  it('после удара в доме РАЗРЕШЁН только вынос той же шашкой (когда все дома)', () => {
+    // Все белые в доме. Белая на 3 бьёт блот на 0. Оставшимся кубиком 1 —
+    // единственный ход побившей шашки: ВЫНОС 0->off (обычных ходов нет).
+    const pts = new Array(24).fill(0);
+    pts[3] = 1; pts[1] = 13; pts[0] = -1; pts[18] = -14;
+    const s: GameState = { pts, bar: { w: 0, b: 0 }, off: { w: 0, b: 0 }, turn: 'w', dice: [3, 1], rolled: [3, 1], variant: 'short' };
 
-    for (let iter = 0; iter < 4000; iter++) {
-      const base = randomState(rng);
-      // корректность позиции
-      if (S.checkerCount(base, 'w') !== 15 || S.checkerCount(base, 'b') !== 15) continue;
+    S.applyMove(s, 3, 0, 3);
+    expect(s.pts[0]).toBe(1);
+    expect(s.hitLock).toContain(0);
 
-      const a = 1 + Math.floor(rng() * 6);
-      const b = 1 + Math.floor(rng() * 6);
-      base.rolled = [a, b];
-      base.dice = S.diceToMoves([a, b]);
+    const from0 = targetsFrom(s, 0);
+    expect(from0.length).toBeGreaterThan(0);
+    expect(from0.every((m) => m.to === 'off')).toBe(true);
+  });
 
-      const seqs = maximalSequences(base);
-      if (seqs.length === 0) continue;
+  it('удар ВНЕ своего дома НЕ запирает шашку — обычное продолжение доступно', () => {
+    const pts = new Array(24).fill(0);
+    pts[13] = 1; pts[20] = 14; pts[10] = -1; pts[0] = -14;
+    const s: GameState = { pts, bar: { w: 0, b: 0 }, off: { w: 0, b: 0 }, turn: 'w', dice: [3, 2], rolled: [3, 2], variant: 'short' };
 
-      // Ищем максимальные последовательности длиной >=2, где первый ход — удар
-      // блота соперника в доме белых.
-      for (const seq of seqs) {
-        if (seq.length < 2) continue;
-        const first = seq[0];
-        if (first.to === 'off' || first.from === 'bar') continue;
-        const toIdx = first.to as number;
-        const isHit = base.pts[toIdx] * sign('w') === -1; // там чёрный блот
-        if (!isHit) continue;
-        if (!inHome('w', toIdx)) continue; // именно «в своей зоне»
-
-        // Применяем удар.
-        const s2 = S.cloneState(base);
-        S.applyMove(s2, first.from, first.to, first.die);
-
-        // Второй ход последовательности — той же шашкой?
-        const second = seq[1];
-        if (second.from !== toIdx) continue; // интересует продолжение ИМЕННО побившей шашкой
-
-        scenariosChecked++;
-
-        // Ключевая проверка: движок ДОЛЖЕН предлагать ход из toIdx.
-        const offered = allowedMoves(s2).some((m) => m.from === toIdx);
-        const tgts = targetsFrom(s2, toIdx);
-        expect(offered, `после удара на ${toIdx} должен быть доступен ход этой же шашкой`).toBe(true);
-        expect(tgts.length, `targetsFrom(${toIdx}) не должен быть пустым`).toBeGreaterThan(0);
-      }
-    }
-
-    // Убеждаемся, что сценарии реально встретились (тест не «пустой»).
-    expect(scenariosChecked).toBeGreaterThan(0);
-    // Для наблюдаемости:
-    console.log('Проверено сценариев «удар+продолжение той же шашкой»:', scenariosChecked);
+    S.applyMove(s, 13, 10, 3); // бой вне дома
+    expect(s.pts[10]).toBe(1);
+    expect(s.hitLock ?? []).not.toContain(10);
+    expect(allowedMoves(s).some((m) => m.from === 10 && m.to === 8)).toBe(true);
   });
 });

@@ -100,6 +100,10 @@ export function legalMovesFrom(s: GameState, from: MoveFrom): Move[] {
     if (dest === 'off') {
       if (canBearOff(s, c, from, d)) out.push({ from, to: 'off', die: d });
     } else if (!isBlock(s, c, dest)) {
+      // Домашнее правило: если этой шашкой в этом ходу уже был совершён бой в
+      // своём доме (пункт в s.hitLock) — обычные ходы ею запрещены, разрешён
+      // только вынос (обработан выше). Пропускаем перемещение по пунктам.
+      if (s.hitLock?.includes(from)) continue;
       out.push({ from, to: dest, die: d });
     }
   }
@@ -138,6 +142,12 @@ export function applyMove(s: GameState, from: MoveFrom, to: MoveTo, die: number)
       hit = true;
     }
     s.pts[to] += sg;
+    // Домашнее правило: бой В СВОЁМ ДОМЕ фиксирует пункт — побившая шашка дальше
+    // обычным ходом не идёт (только вынос). См. legalMovesFrom / s.hitLock.
+    if (hit && inHome(c, to)) {
+      if (!s.hitLock) s.hitLock = [];
+      if (!s.hitLock.includes(to)) s.hitLock.push(to);
+    }
   }
   const di = s.dice.indexOf(die);
   if (di >= 0) s.dice.splice(di, 1);
@@ -149,12 +159,14 @@ export function endTurn(s: GameState): void {
   s.turn = opp(s.turn);
   s.dice = [];
   s.rolled = null;
+  s.hitLock = []; // новый ход — блокировки боя сбрасываются
 }
 
 /** Начать ход: бросить и заполнить s.dice. @returns выпавший бросок [a,b]. */
 export function startTurn(s: GameState, rng: Rng = Math.random): [number, number] {
   s.rolled = rollDice(rng);
   s.dice = diceToMoves(s.rolled);
+  s.hitLock = []; // блокировки боя действуют только внутри одного хода
   return s.rolled;
 }
 
@@ -195,6 +207,7 @@ export function cloneState(s: GameState): GameState {
     rolled: s.rolled ? [s.rolled[0], s.rolled[1]] : null,
     variant: s.variant ?? 'short',
     headUsed: s.headUsed,
+    hitLock: s.hitLock ? s.hitLock.slice() : undefined,
   };
 }
 

@@ -95,11 +95,15 @@ export function useGame(
   }, [humanColor]);
 
   const endHuman = useCallback(() => {
+    // Страховка: если партия уже завершена (последняя шашка вынесена) — НИКОГДА
+    // не передаём ход боту. Иначе «протухший» таймер конца хода мог бы перебить
+    // фазу gameover на botTurn и скрыть модалку победы. Фиксируем победу.
+    if (E.isGameOver(gameRef.current)) { checkWin(); return; }
     E.endTurn(gameRef.current);
     setSelected(null);
     render();
     setPhase('botTurn');
-  }, [render]);
+  }, [render, checkWin]);
 
   const roll = useCallback(() => {
     // Бросаем только в свою фазу и ТОЛЬКО если кости ещё не брошены. Второй

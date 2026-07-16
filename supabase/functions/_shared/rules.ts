@@ -29,8 +29,11 @@ function uniqueMoves(moves: Move[]): Move[] {
  */
 function stateSig(st: GameState): string {
   const dice = [...st.dice].sort((a, b) => a - b).join(',');
+  // hitLock влияет на легальные продолжения (побившая в доме шашка заперта) —
+  // обязателен в сигнатуре, иначе транспозиции с/без блокировки перепутаются.
+  const lock = st.hitLock && st.hitLock.length ? [...st.hitLock].sort((a, b) => a - b).join('.') : '';
   return `${st.turn}|${st.pts.join(',')}|${st.bar.w},${st.bar.b}|` +
-    `${st.off.w},${st.off.b}|${dice}|${st.headUsed ?? 0}`;
+    `${st.off.w},${st.off.b}|${dice}|${st.headUsed ?? 0}|${lock}`;
 }
 
 /**
