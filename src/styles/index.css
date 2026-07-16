@@ -1412,3 +1412,36 @@ body::after {
 /* П7b — кликабельное имя игрока в таблице рейтингов */
 .ratings__player--link { text-decoration: none; color: inherit; border-radius: 8px; transition: background 0.12s; }
 .ratings__player--link:hover .ratings__names strong { color: var(--accent); text-decoration: underline; }
+
+/* ===== Number-инпуты: убираем стрелки-спиннеры во всём проекте (2026-07-17) ===== */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+
+/* ===== П3 — баланс кошелька в меню профиля ===== */
+.profile-menu__id { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+.profile-menu__balance {
+  font-size: 0.82rem; font-weight: 700; color: var(--accent);
+  background: rgba(216, 184, 120, 0.14); border: 1px solid rgba(216, 184, 120, 0.3);
+  border-radius: 999px; padding: 0.05rem 0.55rem; align-self: flex-start;
+}
+
+/* ===== П4 — фрейм внутриигрового кошелька на странице профиля ===== */
+.wallet {
+  margin-top: 1rem; padding: 1rem 1.1rem; border-radius: 14px;
+  background: linear-gradient(135deg, rgba(216, 184, 120, 0.14), rgba(184, 134, 47, 0.06));
+  border: 1px solid rgba(216, 184, 120, 0.3);
+}
+.wallet__top { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.wallet__label { font-size: 0.85rem; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.05em; }
+.wallet__amount { font-size: 1.5rem; font-weight: 800; color: var(--accent); }
+.wallet__actions { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-top: 0.8rem; }
+.wallet__actions .btn { flex: 1 1 auto; }
+.wallet__note { margin: 0.7rem 0 0; font-size: 0.82rem; opacity: 0.8; }
+
+/* ===== П2 — рейтинги: адаптация под узкие экраны (доп. столбец «Поражения») ===== */
+@media (max-width: 680px) {
+  .ratings__table { font-size: 0.9rem; }
+  .ratings__table thead th { padding: 0.6rem 0.55rem; }
+  .ratings__table tbody td { padding: 0.5rem 0.55rem; }
+}

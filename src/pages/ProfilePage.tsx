@@ -4,6 +4,7 @@ import { useAuth } from '../lib/auth';
 import { validateUsername, winRate } from '../lib/username';
 import ConfirmModal from '../components/ConfirmModal';
 import { IconPencil } from '../components/icons';
+import { WALLET_BALANCE_RUB, formatRub } from '../lib/wallet';
 
 export default function ProfilePage() {
   const auth = useAuth();
@@ -15,6 +16,7 @@ export default function ProfilePage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmOut, setConfirmOut] = useState(false);
+  const [walletNote, setWalletNote] = useState<string | null>(null);
 
   if (!auth.ready) {
     return <section className="profile"><div className="card"><p>Загрузка…</p></div></section>;
@@ -133,6 +135,23 @@ export default function ProfilePage() {
           <div className="stat"><span className="stat__num">{p?.games_played ?? 0}</span><span className="stat__lbl">Партий</span></div>
           <div className="stat"><span className="stat__num">{p?.games_won ?? 0}</span><span className="stat__lbl">Побед</span></div>
           <div className="stat"><span className="stat__num">{winRate(p?.games_played ?? 0, p?.games_won ?? 0)}%</span><span className="stat__lbl">Винрейт</span></div>
+        </div>
+
+        {/* Внутриигровой кошелёк (пока заглушка — платёжная система позже) */}
+        <div className="wallet">
+          <div className="wallet__top">
+            <span className="wallet__label">Баланс кошелька</span>
+            <span className="wallet__amount">{formatRub(WALLET_BALANCE_RUB)}</span>
+          </div>
+          <div className="wallet__actions">
+            <button className="btn btn--primary" onClick={() => setWalletNote('Пополнение баланса скоро будет доступно — платёжная система в разработке.')}>
+              Пополнить баланс
+            </button>
+            <button className="btn" onClick={() => setWalletNote('Вывод средств скоро будет доступен — платёжная система в разработке.')}>
+              Вывести средства
+            </button>
+          </div>
+          {walletNote && <p className="wallet__note">{walletNote}</p>}
         </div>
 
         {!p && (

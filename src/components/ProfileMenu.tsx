@@ -20,6 +20,7 @@ import { useSocialNotifications } from '../lib/socialNotifications';
 import { useNavGuardRef } from '../lib/navGuard';
 import ConfirmModal from './ConfirmModal';
 import { useOverlay } from '../game/pause';
+import { WALLET_BALANCE_RUB, formatRub } from '../lib/wallet';
 
 export default function ProfileMenu() {
   const auth = useAuth();
@@ -83,7 +84,10 @@ export default function ProfileMenu() {
           <div className="profile-menu__scrim" onClick={() => setOpen(false)} />
           <div className="profile-menu__panel">
             <div className="profile-menu__head">
-              <span className="profile-menu__title">{label}</span>
+              <div className="profile-menu__id">
+                <span className="profile-menu__title">{label}</span>
+                <span className="profile-menu__balance" title="Баланс кошелька">{formatRub(WALLET_BALANCE_RUB)}</span>
+              </div>
               <button
                 type="button"
                 className="profile-menu__close"

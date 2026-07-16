@@ -46,6 +46,7 @@ export default function RatingsPage() {
                 <th className="ratings__c-num">Рейтинг</th>
                 <th className="ratings__c-num ratings__c-opt">Игры</th>
                 <th className="ratings__c-num ratings__c-opt">Победы</th>
+                <th className="ratings__c-num ratings__c-opt">Поражения</th>
                 <th className="ratings__c-num">% побед</th>
               </tr>
             </thead>
@@ -72,6 +73,7 @@ export default function RatingsPage() {
                     <td className="ratings__c-num ratings__rating">{r.rating}</td>
                     <td className="ratings__c-num ratings__c-opt">{r.games_played}</td>
                     <td className="ratings__c-num ratings__c-opt">{r.games_won}</td>
+                    <td className="ratings__c-num ratings__c-opt">{Math.max(0, r.games_played - r.games_won)}</td>
                     <td className="ratings__c-num">{winPct}%</td>
                   </tr>
                 );
