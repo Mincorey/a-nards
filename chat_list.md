@@ -2404,3 +2404,18 @@ theme-color (`#3b2a1a`) и manifest не трогал (влияют и на ве
 **Файлы:** `src/test/setupTests.ts` (новый), `vite.config.ts`, `.gitignore`.
 
 **ИТОГ по аудиту 2026-07-17: проработаны ВСЕ пункты.** Сделаны: 1 (git/CRLF), 3.1 (RLS initplan), 3.2 (FK-индексы), раздел 5 полностью (Board→хук, subscribeLobby debounce, pre-push check:engine, чистка vite-timestamp), п.5 (_mont), п.7 (мок звука). Попутно починен дрейф зависимостей (supabase 2.108: auth.tsx типы, useOnlineGame lint). Отменён п.3 (Leaked Password — только Pro-тариф). Остаётся только п.9 (⏸ финансы — леджер/резерв ставок, делать лишь при запуске реальных денег).
+
+## Сессия 2026-07-17 (продолжение) — Чистка проекта от лишних/временных файлов
+
+**Просканировал весь корень, сверил tracked/untracked (git ls-files) и ссылки в коде. Удалено 4 группы (пользователь подтвердил все):**
+
+1. **Сборочный мусор (~33 МБ, untracked/ignored, регенерируется):** `dist/`, `tsconfig.tsbuildinfo`, `tsconfig.node.tsbuildinfo`, `vite.config.js`, `vite.config.d.ts`, `vite.config.verify.mjs`.
+2. **Дубликаты ассетов (~24 МБ, untracked/ignored):** корневой `assets/` (дубли board/dice/fishka — реальные в `public/assets/`), `public/assets/lobby.png` и `lobby-bg.png` (в коде используется только `lobby-bg.jpg`). Проверено grep'ом: ссылок нет.
+3. **Мёртвый код + скриншоты (трекнутые → `git rm`):** `src/components/board/Dice.tsx` (старый 2D-кубик, нигде не импортируется — заменён Dice3D), `_smoke.mjs` (ручной смоук, покрыт vitest), `_mont/` (3 png, 6.2 МБ — БЫЛИ ЗАКОММИЧЕНЫ в репо; .gitignore их уже не убирал бы, поэтому `git rm -r`).
+4. **`_migration_fr/`** (untracked/ignored) — разовый дамп миграции во Франкфурт с хэшами паролей/перс.данными; больше не нужен как бэкап.
+
+**Важно:** секреты НЕ трогал — `.env.local` и `Supabase.txt` на месте. Доки (`docs/engine/`, `PLAN.md`, `MIGRATION_FRANKFURT.md`, `AUDIT_*`) и исходники сохранены.
+
+**Проверка после чистки (чистая копия): build 0 ошибок, тесты 93/93, lint 0, check:engine ok** — удаление Dice.tsx/ассетов ничего не сломало. `public/assets/` теперь ровно 5 нужных файлов (board, dice, fishka_white, fishka_black, lobby-bg.jpg).
+
+**Git:** staged 5 удалений (`git rm`: Dice.tsx, _smoke.mjs, _mont×3). Нужно закоммитить и запушить. Остальные удаления были untracked/ignored — git их и не видел.
