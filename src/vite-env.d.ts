@@ -7,3 +7,6 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+/** Уникальный ID текущей сборки, зашивается через define в vite.config.ts. */
+declare const __BUILD_ID__: string;

@@ -2309,3 +2309,29 @@ eslint по изменённым файлам — 0 ошибок ✅; парит
 theme-color (`#3b2a1a`) и manifest не трогал (влияют и на верхнюю строку).
 
 **Проверка:** `vite build` ✅ (CSS бандлится без ошибок).
+
+---
+
+## Сессия 2026-07-17 — Автообновление у пользователей после редеплоя
+
+**Контекст/вопрос:** как быстро изменения после push→Vercel доходят до пользователей, нужно ли чистить кэш, можно ли форсить обновление. Важно: не грузить Supabase (free-тариф).
+
+**Разбор:** у проекта НЕТ Service Worker (ни vite-plugin-pwa, ни sw.js) — PWA только по manifest+иконкам. Значит классической «залипшей» PWA-проблемы нет. Хэшированные ассеты + `index.html` с `must-revalidate` = новый заход сразу получает свежую версию без чистки кэша. Единственный кейс «не увидел сразу» — уже открытая SPA-вкладка в момент деплоя (не перезагружается сама).
+
+**Реализовано (проверка версии без нагрузки на БД):**
+- `vite.config.ts`: const `BUILD_ID = new Date().toISOString()`, `define __BUILD_ID__`, плагин `emitVersionJson` → кладёт `dist/version.json` (статика с CDN Vercel, ноль запросов к Supabase).
+- `src/vite-env.d.ts`: `declare const __BUILD_ID__: string`.
+- `src/lib/useVersionCheck.ts`: опрос `/version.json` (cache:no-store) раз в 5 мин + при возврате фокуса на вкладку (throttle 60с); сравнение с `__BUILD_ID__`; ошибки молча игнорит; после находки опрос стоп. В dev не работает (version.json нет).
+- `src/components/UpdateBanner.tsx` + стили в `index.css`: ненавязчивый баннер снизу «Доступна новая версия → Обновить/Позже». Специально БЕЗ авто-reload (не терять действие пользователя). Подключён в `App.tsx`.
+
+**Тесты:** плагин проверен отдельным конфигом — version.json создаётся, его `version` совпадает с `__BUILD_ID__` в бандле. `tsc --noEmit` — 0 ошибок. eslint новых файлов — 0.
+
+**Важные нюансы окружения:**
+- Инструменты Write/Edit ОБРЕЗАЮТ файлы на этом маунте (подтвердилось на App.tsx, vite-env.d.ts, vite.config.ts). Надёжно только `cat > file << 'EOF'` в bash (правило 4 CLAUDE.md).
+- Vite предпочитает `vite.config.js` над `.ts`. В проекте `tsconfig.node.json` (composite:true, без noEmit) → `tsc -b` компилирует `vite.config.ts`→`vite.config.js` при каждой сборке, поэтому на Vercel всё ок. Локально устаревший `vite.config.js` может теневать `.ts` — при проблемах удалить его один раз (он в .gitignore).
+- Vercel: catch-all rewrite на index.html НЕ ломает `/version.json` — статические файлы отдаются раньше rewrite (как favicon/manifest/иконки).
+
+**НЕ применено на прод:** изменения только локально, ещё не коммитили/пушили.
+
+**Дополнение (та же сессия): авто-reload при простое.**
+`src/components/UpdateBanner.tsx` — параллельно с баннером следит за активностью пользователя (pointerdown/keydown/mousemove/wheel/touchstart/scroll). Если найдена новая версия И партия не идёт (`guard.active.current === false`) И (простой ≥ 60с ИЛИ вкладка свёрнута `visibilityState==='hidden'`) → `location.reload()` сам. Проверка раз в 5с. Клик «Позже» отменяет и авто-reload. Тип-чек и линт — 0 ошибок, полная сборка успешна.

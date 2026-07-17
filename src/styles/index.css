@@ -1496,3 +1496,75 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
   .ratings__names strong { font-size: 0.82rem; max-width: 42vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .ratings__rating { font-size: 0.88rem; }
 }
+
+/* =============================================================================
+ * Баннер обновления (см. components/UpdateBanner.tsx). Ненавязчиво всплывает
+ * снизу по центру поверх всего интерфейса; z-index выше модалок (100) и
+ * профиль-меню (60), чтобы уведомление не терялось.
+ * ========================================================================== */
+.update-banner {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+  transform: translateX(-50%);
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  max-width: min(560px, calc(100vw - 24px));
+  padding: 0.7rem 0.9rem 0.7rem 1.1rem;
+  background: var(--wood-dark);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  animation: update-banner-in 0.25s ease-out;
+}
+@keyframes update-banner-in {
+  from { opacity: 0; transform: translate(-50%, 12px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+.update-banner__text {
+  color: var(--cream);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.update-banner__actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+.update-banner__btn {
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid var(--wood-light);
+  background: transparent;
+  color: var(--cream);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.update-banner__btn:hover { background: rgba(255, 255, 255, 0.08); }
+.update-banner__btn--primary {
+  background: var(--accent);
+  color: var(--text-dark);
+  border-color: transparent;
+  font-weight: 700;
+}
+.update-banner__btn--primary:hover { background: var(--wood-light); }
+@media (max-width: 560px) {
+  .update-banner {
+    left: 12px;
+    right: 12px;
+    transform: none;
+    max-width: none;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.6rem;
+  }
+  @keyframes update-banner-in {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .update-banner__actions { justify-content: flex-end; }
+}

@@ -32,3 +32,4 @@ public/assets/lobby.png
 Supabase.txt
 # --- дампы миграции во Франкфурт (хэши паролей, персональные данные) ---
 _migration_fr/
+vite.config.verify.mjs

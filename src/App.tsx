@@ -17,6 +17,7 @@ import ProfileMenu from './components/ProfileMenu';
 import HeaderToggle from './components/HeaderToggle';
 import Footer from './components/Footer';
 import ConfirmModal from './components/ConfirmModal';
+import UpdateBanner from './components/UpdateBanner';
 import { useAuth } from './lib/auth';
 import { useNavGuardRef } from './lib/navGuard';
 
@@ -110,6 +111,8 @@ export default function App() {
       </main>
 
       <Footer nav={nav} onNavClick={onNavClick} />
+
+      <UpdateBanner />
 
       <ConfirmModal
         open={pendingTo != null}
