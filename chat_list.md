@@ -2370,3 +2370,25 @@ theme-color (`#3b2a1a`) и manifest не трогал (влияют и на ве
 - Локальный файл `0022_*.sql` нужно закоммитить+запушить (вместе с `.gitattributes`, `0021_*.sql`, файлом аудита).
 
 **Прогресс по аудиту:** выполнены пункты 1 (git/CRLF), 3.1 (RLS initplan), 3.2 (FK-индексы). Осталось: 3 (🟠 Leaked Password Protection — Dashboard), 🟢-мелочи (subscribeLobby фильтр, мок HTMLMediaElement.play в тестах, check:engine в pre-push, _mont/ в .gitignore).
+
+## Сессия 2026-07-17 (продолжение) — Аудит: 4 «зелёных» пункта (раздел 5) + попутные фиксы
+
+**Все правки проверены в чистой копии `/tmp/anards-verify` через `npm ci`: build 0 ошибок, lint 0 предупреждений, тесты 93/93, check:engine ok.**
+
+1. **Board.tsx → useBoardAnimations.** Логика «перелёта» фишки (обычный ход, бой с уводом на бар, вынос, анти-фантом при осцилляции сети) вынесена из `Board.tsx` в новый хук `src/components/board/useBoardAnimations.ts`. Board.tsx: 560→349 строк. Поведение не менялось — тесты анимаций (`Board.bearoffFly`, `Board.sound`) зелёные. `playChecker` теперь импортируется только в хуке.
+
+2. **subscribeLobby (`src/lib/online.ts`): trailing-debounce 250мс.** Всплески событий `game_tables` склеиваются в одну перезагрузку списка. Серверный фильтр `status=eq.waiting` СОЗНАТЕЛЬНО не добавлял: при старте партии строка меняется waiting→playing, и с таким фильтром клиент не получит это событие — запущенный стол «зависнет» в лобби. Debounce безопаснее и закрывает суть замечания.
+
+3. **pre-push hook.** Создан версионируемый `.githooks/pre-push` (`npm run check:engine`, блокирует push при рассинхроне движка). Husky в проекте нет — вместо зависимости используем `core.hooksPath`. Пользователю однократно на машине: `git config core.hooksPath .githooks`.
+
+4. **Чистка.** Удалены 13 временных `vite.config.*.timestamp-*.mjs` из корня (удаление файлов теперь разрешено через allow_cowork_file_delete).
+
+**ПОПУТНО НАЙДЕНО И ИСПРАВЛЕНО (важно):** на текущем коммите `npm run build` УЖЕ падал из-за дрейфа зависимостей — `package-lock.json` пинит `@supabase/supabase-js` 2.108.2, хотя код писался под 2.45.x. Сломалось два места (не связаны с моими правками, но блокировали сборку):
+- `src/lib/auth.tsx` (~147): `implicitly any` в `.map((f)=>…).filter((p)=>…)` при чистке старых аватаров — добавил явные типы `f: { name: string }`, `p: string`.
+- `src/hooks/useOnlineGame.ts` (~93): предупреждение `react-hooks/exhaustive-deps` в эффекте жеребьёвки онлайна (эффект намеренно зависит от `game?.id`, а не всего `game`) — добавил `eslint-disable-next-line` с обоснованием, как уже принято в проекте.
+
+**Урок:** в проекте есть `package-lock.json` — для воспроизводимой проверки использовать `npm ci` (а не `npm install`, который подтягивает новые версии в рамках `^`). Полный `npm install` из песочницы идёт долго через прокси и фоновый процесс не переживает между bash-вызовами — ставить синхронно (кэш тёплый → `npm ci` ~3с). Файловый mount FUSE запрещает unlink → node_modules после обрыва install бьётся; лечится `rm -rf node_modules` + повторный `npm ci`.
+
+**Файлы:** `src/components/board/useBoardAnimations.ts` (новый), `src/components/board/Board.tsx`, `src/lib/online.ts`, `src/hooks/useOnlineGame.ts`, `src/lib/auth.tsx`, `.githooks/pre-push` (новый).
+
+**Все пункты аудита проработаны:** сделаны 1, 3.1, 3.2, и раздел 5 (4 зелёных). Отменён п.3 (Leaked Password — только Pro). Остаются по желанию: п.7 (мок HTMLMediaElement.play в тестах — косметика вывода), п.5 (_mont/ в .gitignore), финансы (п.9 — только при запуске реальных денег).

@@ -144,8 +144,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { data: files } = await supabase.storage.from('avatars').list(userId);
       const stale = (files ?? [])
-        .map((f) => `${userId}/${f.name}`)
-        .filter((p) => p !== path);
+        .map((f: { name: string }) => `${userId}/${f.name}`)
+        .filter((p: string) => p !== path);
       if (stale.length > 0) await supabase.storage.from('avatars').remove(stale);
     } catch {
       /* очистка старых аватаров не критична */

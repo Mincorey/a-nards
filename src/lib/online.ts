@@ -345,13 +345,28 @@ export function createGameSync(tableId: string): GameSyncTransport {
   };
 }
 
-/** Подписка на список открытых столов (любые изменения game_tables). */
-export function subscribeLobby(onChange: () => void) {
+/** Подписка на список открытых столов (любые изменения game_tables).
+ *  Всплески событий (несколько апдейтов подряд — создание/join/старт/удаление
+ *  столов) склеиваются trailing-debounce'ом: вместо N перезагрузок списка
+ *  делаем одну через `debounceMs` после последнего события. Это снимает лишние
+ *  запросы `listOpenTables` при росте активности в лобби, не теряя изменений.
+ *  Серверный фильтр `status=eq.waiting` намеренно НЕ ставим: он бы «проглатывал»
+ *  переход стола waiting→playing (NEW.status уже 'playing'), и запущенный стол
+ *  завис бы в списке как открытый до ручного обновления. */
+export function subscribeLobby(onChange: () => void, debounceMs = 250) {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const fire = () => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => { timer = null; onChange(); }, debounceMs);
+  };
   const ch = supabase
     .channel('lobby')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'game_tables' }, () => onChange())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'game_tables' }, fire)
     .subscribe();
-  return () => { void supabase.removeChannel(ch); };
+  return () => {
+    if (timer) { clearTimeout(timer); timer = null; }
+    void supabase.removeChannel(ch);
+  };
 }
 
 /** Сдаться / выйти из партии во время игры — поражение вышедшему (edge resign). */

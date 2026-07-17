@@ -90,6 +90,9 @@ export function useOnlineGame(tableId: string, myColor: Color | null): UseOnline
     const gid = game.id;
     const t = window.setTimeout(() => { if (mounted.current) setOpeningClearedFor(gid); }, 3500);
     return () => window.clearTimeout(t);
+    // Зависим только от game?.id, а не от всего объекта game: иначе эффект
+    // перезапускался бы на каждом realtime-апдейте партии (лишние таймеры).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showOpeningRaw, game?.id]);
 
   const phase: OnlinePhase = useMemo(() => {

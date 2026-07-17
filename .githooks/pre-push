@@ -1,0 +1,18 @@
+#!/bin/sh
+# =============================================================================
+# A-NARDS · pre-push hook — паритет движка src/engine <-> supabase/functions/_shared.
+# Не даёт запушить, если серверная копия движка разошлась с клиентской.
+# Установка (однократно, на каждой машине-клоне):
+#     git config core.hooksPath .githooks
+# Пропустить проверку разово (не рекомендуется): git push --no-verify
+# =============================================================================
+echo "[pre-push] check:engine — сверка паритета движка..."
+npm run --silent check:engine
+status=$?
+if [ $status -ne 0 ]; then
+  echo "[pre-push] ОТКЛОНЕНО: src/engine и supabase/functions/_shared разошлись."
+  echo "[pre-push] Выполни: npm run sync:engine  — затем закоммить и повтори push."
+  exit 1
+fi
+echo "[pre-push] движок в синхроне — ок."
+exit 0
