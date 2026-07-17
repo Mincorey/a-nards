@@ -2335,3 +2335,38 @@ theme-color (`#3b2a1a`) и manifest не трогал (влияют и на ве
 
 **Дополнение (та же сессия): авто-reload при простое.**
 `src/components/UpdateBanner.tsx` — параллельно с баннером следит за активностью пользователя (pointerdown/keydown/mousemove/wheel/touchstart/scroll). Если найдена новая версия И партия не идёт (`guard.active.current === false`) И (простой ≥ 60с ИЛИ вкладка свёрнута `visibilityState==='hidden'`) → `location.reload()` сам. Проверка раз в 5с. Клик «Позже» отменяет и авто-reload. Тип-чек и линт — 0 ошибок, полная сборка успешна.
+
+## Сессия 2026-07-17 — Аудит A-NARDS: .gitattributes (CRLF) + RLS-оптимизация (пункты 1 и 3.1)
+
+**Контекст:** работа по файлу `AUDIT_2026-07-17.md` (полный техаудит проекта).
+
+**Пункт 1 (🟠 git) — фантомные CRLF-диффы устранены.**
+- Причина 56 «изменённых» файлов в `git status` — Windows-редактор переписал концы строк LF→CRLF; реальных правок кода нет (`git diff --ignore-all-space` пуст).
+- Создан `.gitattributes` (`* text=auto eol=lf` + `binary` для png/jpg/шрифтов/аудио), выполнен `git add --renormalize .` → все 56 фантомных диффов исчезли.
+- Коммит `e8df68a` (только `.gitattributes`, без мусорного коммита). **Не запушен** — ветка main на 1 впереди origin/main. Пользователю: `git push origin main`.
+
+**Про доступ к файлам / удаление:** папка проекта примонтирована в песочницу как FUSE (rw), но `unlink` (удаление) заблокирован намеренным предохранителем Cowork. Решается инструментом `allow_cowork_file_delete` — пользователь один раз подтвердил, удаление для папки A-NARDS включено, мусорные lock/temp-файлы в `.git` вычищены. Чтение/запись/переименование работали всегда — простоя в обычной работе нет.
+
+**Пункт 3.1 (🟠 БД) — RLS auth_rls_initplan оптимизирован.**
+- Создана миграция `supabase/migrations/0021_rls_initplan_optim.sql`: во всех 17 политиках на 6 таблицах (`profiles`, `game_tables`, `table_seats`, `invites`, `friendships`, `table_secrets`) прямой `auth.uid()` обёрнут в `(select auth.uid())` — вычисляется один раз на запрос (InitPlan), а не на каждую строку. Политики через `private.can_see_table(...)` (`games_select`, `moves_select`, `seat_select`) не трогали — там нет прямого `auth.uid()`.
+- Порядок (по CLAUDE.md — сначала тест): сухой прогон всего SQL в `begin…rollback` через `execute_sql` (0 ошибок, база не изменена) → `apply_migration` на боевой проект `gmpvcrsmkxpjkjrvuyng`.
+- Проверка после применения: `pg_policies` — 17 обёрнуто / 0 необёрнуто; тексты политик идентичны оригиналам (изменилась только обёртка вызова, семантика сохранена); performance-advisor — **все 17 предупреждений `auth_rls_initplan` исчезли** (остались только unindexed_foreign_keys — пункт 3.2, и unused_index — 3.3, их не трогаем).
+- Локальный файл `0021_*.sql` нужно закоммитить и запушить вместе с `.gitattributes`.
+
+**Важно:** боевой проект Supabase теперь `gmpvcrsmkxpjkjrvuyng` (Франкфурт, eu-central-1), а не старый `wiwfzmwzkjmluhnrrcnh` из ранних сессий (была миграция во Франкфурт — см. MIGRATION_FRANKFURT.md).
+
+**Отметки о выполнении проставлены** в `AUDIT_2026-07-17.md` (пункты 1 и 3.1 + строки 1–2 сводной таблицы).
+
+**Следующие кандидаты из аудита:** 3 (🟠 Leaked Password Protection — вкл. в Dashboard), 3.2/пункт 4 (🟡 индексы на непокрытые FK), затем 🟢-мелочи.
+
+## Сессия 2026-07-17 (продолжение) — Аудит пункт 3.2: covering-индексы для FK
+
+**Создана миграция `supabase/migrations/0022_fk_covering_indexes.sql`** — 7 индексов на непокрытых внешних ключах:
+`idx_friendships_requester`, `idx_friendships_addressee`, `idx_game_tables_owner`, `idx_invites_from`, `idx_invites_to`, `idx_moves_player`, `idx_table_seats_user`.
+
+- Перед написанием сверил через `pg_constraint`/`pg_index`: ровно эти 7 FK без ведущего индекса (`table_id`/`game_id` уже покрыты — не трогал). Нюанс: `table_seats.user_id` и `invites.to_id` входят в композитные уникальные индексы `(table_id, user_id)`/`(table_id, to_id)`, но там они ВТОРАЯ колонка (ведущая — `table_id`), поэтому FK по ним не покрыт — нужны отдельные индексы. Имена — в стиле проекта `idx_<таблица>_<колонка>`.
+- Применена через `apply_migration` к `gmpvcrsmkxpjkjrvuyng`. Проверка: все 7 в `pg_indexes`; performance-advisor — **все 7 `unindexed_foreign_keys` исчезли**.
+- Ожидаемо: advisor теперь помечает эти 7 как `unused_index` — потому что таблицы пусты и трафика не было (та же природа, что пункт 3.3). Удалять НЕ нужно.
+- Локальный файл `0022_*.sql` нужно закоммитить+запушить (вместе с `.gitattributes`, `0021_*.sql`, файлом аудита).
+
+**Прогресс по аудиту:** выполнены пункты 1 (git/CRLF), 3.1 (RLS initplan), 3.2 (FK-индексы). Осталось: 3 (🟠 Leaked Password Protection — Dashboard), 🟢-мелочи (subscribeLobby фильтр, мок HTMLMediaElement.play в тестах, check:engine в pre-push, _mont/ в .gitignore).
