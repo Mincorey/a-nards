@@ -2392,3 +2392,15 @@ theme-color (`#3b2a1a`) и manifest не трогал (влияют и на ве
 **Файлы:** `src/components/board/useBoardAnimations.ts` (новый), `src/components/board/Board.tsx`, `src/lib/online.ts`, `src/hooks/useOnlineGame.ts`, `src/lib/auth.tsx`, `.githooks/pre-push` (новый).
 
 **Все пункты аудита проработаны:** сделаны 1, 3.1, 3.2, и раздел 5 (4 зелёных). Отменён п.3 (Leaked Password — только Pro). Остаются по желанию: п.7 (мок HTMLMediaElement.play в тестах — косметика вывода), п.5 (_mont/ в .gitignore), финансы (п.9 — только при запуске реальных денег).
+
+## Сессия 2026-07-17 (продолжение) — Аудит: оставшиеся мелочи (мок звука в тестах + _mont/ в .gitignore)
+
+**Проверено в чистой копии: build 0, lint 0, тесты 93/93, предупреждение jsdom исчезло.**
+
+1. **Мок `HTMLMediaElement.play()` в тестах (п.7).** Создан `src/test/setupTests.ts` — гасит шумное `Not implemented: HTMLMediaElement's play() method` (наш `lib/sound`/`lib/music` дергает `audio.play()`, в jsdom не реализовано). Мокаем `play()`→resolved-промис и `pause()`→no-op, под guard'ом `typeof HTMLMediaElement !== 'undefined'` (в node-тестах движка его нет). Подключение: в `vite.config.ts` добавлен `/// <reference types="vitest/config" />` и блок `test: { setupFiles: ['./src/test/setupTests.ts'] }`. Централизованного vitest-конфига раньше не было (окружение задаётся per-file через `// @vitest-environment jsdom`) — это сохранено. `Board.sound.test.tsx` целиком мокает модуль `lib/sound`, поэтому глобальный мок его не задевает.
+
+2. **`_mont/` в `.gitignore` (п.5).** Обнаружено: прежняя попытка `echo _mont/ >> .gitignore` в PowerShell записала строку в UTF-16 (с null-байтами и CRLF) — git её не распознавал. Почистил `.gitignore` (убрал null-байты и \r, схлопнул дубли), добавил корректную `_mont/` (UTF-8/LF). Подтверждено `git add _mont/ --dry-run` → «paths are ignored». Примечание: `git check-ignore` на FUSE-mount под git 2.34 капризничает (даёт exit 1), но `add --dry-run` и `git status` авторитетны — папка со скриншотами (~6.5МБ) больше не попадёт в коммит.
+
+**Файлы:** `src/test/setupTests.ts` (новый), `vite.config.ts`, `.gitignore`.
+
+**ИТОГ по аудиту 2026-07-17: проработаны ВСЕ пункты.** Сделаны: 1 (git/CRLF), 3.1 (RLS initplan), 3.2 (FK-индексы), раздел 5 полностью (Board→хук, subscribeLobby debounce, pre-push check:engine, чистка vite-timestamp), п.5 (_mont), п.7 (мок звука). Попутно починен дрейф зависимостей (supabase 2.108: auth.tsx типы, useOnlineGame lint). Отменён п.3 (Leaked Password — только Pro-тариф). Остаётся только п.9 (⏸ финансы — леджер/резерв ставок, делать лишь при запуске реальных денег).

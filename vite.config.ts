@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 
@@ -37,4 +38,9 @@ export default defineConfig({
   },
   server: { host: true, port: 5173 },
   build: { outDir: 'dist', sourcemap: true },
+  // Vitest: глобальный setup гасит шум jsdom (HTMLMediaElement.play). Окружение
+  // (jsdom/node) по-прежнему выбирается в каждом тесте через // @vitest-environment.
+  test: {
+    setupFiles: ['./src/test/setupTests.ts'],
+  },
 });
