@@ -11,7 +11,7 @@ import Modal from '../components/Modal';
 import { IconDice, IconUsers } from '../components/icons';
 import type { Variant } from '../lib/online.types';
 
-/** Заготовленные ставки COINS для быстрого выбора (заглушки на будущее). */
+/** Заготовленные ставки A-COINS для быстрого выбора (заглушки на будущее). */
 const COIN_PRESETS = [50, 100, 150, 200, 500, 1000];
 /** Фильтр списка столов по типу. */
 type TableFilter = 'all' | 'normal' | 'coins';
@@ -29,6 +29,7 @@ export default function LobbyPage() {
   const [busy, setBusy] = useState(false);
   const [searching, setSearching] = useState(false);
   const [filter, setFilter] = useState<TableFilter>('all');
+  const [query, setQuery] = useState('');
 
   // Создание стола: сперва выбор типа, затем модалка «Новый стол».
   const [chooseType, setChooseType] = useState(false);
@@ -42,7 +43,7 @@ export default function LobbyPage() {
   const [friends, setFriends] = useState<MiniProfile[]>([]);
   const [invitee, setInvitee] = useState<MiniProfile | null>(null);
 
-  // Вход за чужой стол: пошаговый сценарий (пароль / разъяснение COINS / подтверждение).
+  // Вход за чужой стол: пошаговый сценарий (пароль / разъяснение A-COINS / подтверждение).
   const [joinTarget, setJoinTarget] = useState<TableListItem | null>(null);
   const [joinStep, setJoinStep] = useState<JoinStep | null>(null);
   const [joinPassword, setJoinPassword] = useState('');
@@ -101,7 +102,7 @@ export default function LobbyPage() {
     e.preventDefault();
     if (!name.trim()) { setError('Укажите название стола'); return; }
     if (visibility === 'private' && !password.trim()) { setError('Задайте пароль для приватного стола'); return; }
-    if (createMode === 'coins' && (coins <= 0 || coins % 50 !== 0)) { setError('Ставка COINS должна быть кратна 50'); return; }
+    if (createMode === 'coins' && (coins <= 0 || coins % 50 !== 0)) { setError('Ставка A-COINS должна быть кратна 50'); return; }
     setBusy(true); setError(null);
     try {
       const table = await createTable({
@@ -172,10 +173,18 @@ export default function LobbyPage() {
 
   function closeJoin() { setJoinTarget(null); setJoinStep(null); setJoinPassword(''); }
 
-  // Показываем только столы, чей владелец сейчас в сети, и применяем фильтр типа.
+  // Показываем только столы, чей владелец сейчас в сети, применяем фильтр типа
+  // и «умный» поиск по названию стола / имени игрока (мгновенно, без кнопки).
+  const q = query.trim().toLowerCase();
   const visibleTables = tables
     .filter((t) => isOnline(t.owner_id))
-    .filter((t) => (filter === 'all' ? true : tableMode(t) === filter));
+    .filter((t) => (filter === 'all' ? true : tableMode(t) === filter))
+    .filter((t) => {
+      if (!q) return true;
+      const byName = t.name.toLowerCase().includes(q);
+      const byOwner = (t.owner?.display_name ?? '').toLowerCase().includes(q);
+      return byName || byOwner;
+    });
 
   return (
     <section className="lobby">
@@ -195,14 +204,40 @@ export default function LobbyPage() {
 
       {/* Переключатели фильтра типа столов */}
       <div className="lobby__filters seg" role="tablist" aria-label="Фильтр столов">
-        <button type="button" className={'chip' + (filter === 'all' ? ' is-active' : '')} onClick={() => setFilter('all')}>Все столы</button>
+        <button type="button" className={'chip' + (filter === 'all' ? ' is-active' : '')} onClick={() => setFilter('all')}>Все</button>
         <button type="button" className={'chip' + (filter === 'normal' ? ' is-active' : '')} onClick={() => setFilter('normal')}>Обычная игра</button>
-        <button type="button" className={'chip' + (filter === 'coins' ? ' is-active' : '')} onClick={() => setFilter('coins')}>Игра за COINS</button>
+        <button type="button" className={'chip' + (filter === 'coins' ? ' is-active' : '')} onClick={() => setFilter('coins')}>Игра за A-COINS</button>
+      </div>
+
+      {/* Умный поиск: мгновенная фильтрация по названию стола или имени игрока. */}
+      <div className="lobby__search" role="search">
+        <span className="lobby__search-ic" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" />
+          </svg>
+        </span>
+        <input
+          className="lobby__search-input"
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Поиск по названию стола или игроку…"
+          aria-label="Поиск стола по названию или игроку"
+          autoComplete="off"
+        />
+        {query && (
+          <button
+            type="button"
+            className="lobby__search-clear"
+            aria-label="Очистить поиск"
+            onClick={() => setQuery('')}
+          >×</button>
+        )}
       </div>
 
       <div className="lobby__list">
         {loading ? <p>Загрузка столов…</p>
-          : visibleTables.length === 0 ? <p className="lobby__empty">Открытых столов пока нет. Создайте свой!</p>
+          : visibleTables.length === 0 ? <p className="lobby__empty">{q ? 'По вашему запросу столов не найдено.' : 'Открытых столов пока нет. Создайте свой!'}</p>
           : visibleTables.map((t) => {
               const seatCount = t.seats?.[0]?.count ?? 0;
               const isCoins = tableMode(t) === 'coins';
@@ -221,7 +256,7 @@ export default function LobbyPage() {
                     <span className="table-row__badges">
                       <span className="badge">{t.variant === 'short' ? 'Короткие' : 'Длинные'}</span>
                       {isCoins
-                        ? <span className="badge badge--coins">За COINS · {tableCoins(t)}</span>
+                        ? <span className="badge badge--coins">За A-COINS · {tableCoins(t)}</span>
                         : <span className="badge">Обычная</span>}
                       {isPrivate
                         ? <span className="badge badge--lock">🔒 Приватный</span>
@@ -240,7 +275,7 @@ export default function LobbyPage() {
       {chooseType && (
         <Modal className="type-choice" onClose={() => setChooseType(false)}>
           <h2>Выберите тип стола</h2>
-          <p className="setup__subtitle">На чём играем — обычная партия или ставка в COINS</p>
+          <p className="setup__subtitle">На чём играем — обычная партия или ставка в A-COINS</p>
           <div className="type-choice__grid">
             <button type="button" className="type-choice__btn" onClick={() => pickType('normal')}>
               <span className="type-choice__ic"><IconDice /></span>
@@ -249,7 +284,7 @@ export default function LobbyPage() {
             </button>
             <button type="button" className="type-choice__btn type-choice__btn--coins" onClick={() => pickType('coins')}>
               <span className="type-choice__ic">🪙</span>
-              <strong>Игра за COINS</strong>
+              <strong>Игра за A-COINS</strong>
               <span>Со ставкой во внутриигровых монетах</span>
             </button>
           </div>
@@ -260,7 +295,7 @@ export default function LobbyPage() {
       {creating && (
         <Modal className="setup" onClose={() => setCreating(false)}>
           <form onSubmit={onCreate}>
-            <h2>Новый стол{createMode === 'coins' ? ' · за COINS' : ''}</h2>
+            <h2>Новый стол{createMode === 'coins' ? ' · за A-COINS' : ''}</h2>
             <p className="setup__subtitle">Название, вид нард и с кем сесть за стол</p>
             <label className="field">
               <span>Название стола</span>
@@ -274,10 +309,10 @@ export default function LobbyPage() {
               </div>
             </div>
 
-            {/* П4: ставка COINS (только для стола за монеты) */}
+            {/* П4: ставка A-COINS (только для стола за монеты) */}
             {createMode === 'coins' && (
               <div className="setup__group">
-                <span className="setup__label">🪙 Ставка входа, COINS</span>
+                <span className="setup__label">🪙 Ставка входа, A-COINS</span>
                 <input
                   className="setup__coins-input" type="number" min={50} step={50}
                   value={coins}
@@ -290,7 +325,7 @@ export default function LobbyPage() {
                       onClick={() => setCoins(v)}>{v}</button>
                   ))}
                 </div>
-                <div className="setup__hint">Ставка кратна 50 COINS. Пока это заглушка — резервирование монет на балансе появится позже (1 ₽ = 1 COIN).</div>
+                <div className="setup__hint">Ставка кратна 50 A-COINS. Пока это заглушка — резервирование монет на балансе появится позже (1 ₽ = 1 A-COIN).</div>
               </div>
             )}
 
@@ -361,15 +396,15 @@ export default function LobbyPage() {
         </Modal>
       )}
 
-      {/* Вход за стол за COINS — шаг «разъяснение резерва» */}
+      {/* Вход за стол за A-COINS — шаг «разъяснение резерва» */}
       {joinStep === 'coinsInfo' && joinTarget && (
         <Modal className="setup" onClose={closeJoin}>
-          <h2>Игра за COINS</h2>
+          <h2>Игра за A-COINS</h2>
           <p className="setup__subtitle">Стол «{joinTarget.name}»</p>
           <div className="coins-info">
-            <p>Для входа за этот стол потребуется ставка <strong>{tableCoins(joinTarget)} COINS</strong>.</p>
+            <p>Для входа за этот стол потребуется ставка <strong>{tableCoins(joinTarget)} A-COINS</strong>.</p>
             <p>Эта сумма будет <strong>зарезервирована</strong> на вашем балансе на время партии: победитель забирает банк, при выходе из партии ставка проигрывается.</p>
-            <p className="setup__hint">Внутриигровая валюта COINS: 1 ₽ = 1 COIN. Резервирование — заглушка на этом этапе.</p>
+            <p className="setup__hint">Внутриигровая валюта A-COINS: 1 ₽ = 1 A-COIN. Резервирование — заглушка на этом этапе.</p>
           </div>
           {error && <p className="auth__error" role="alert">{error}</p>}
           <div className="profile__actions">
@@ -379,7 +414,7 @@ export default function LobbyPage() {
         </Modal>
       )}
 
-      {/* Вход за стол за COINS — шаг «финальное подтверждение» */}
+      {/* Вход за стол за A-COINS — шаг «финальное подтверждение» */}
       {joinStep === 'coinsConfirm' && joinTarget && (
         <Modal className="setup" onClose={closeJoin}>
           <h2>Подтвердите вход</h2>
@@ -387,8 +422,8 @@ export default function LobbyPage() {
           <ul className="coins-confirm">
             <li><span>Стол</span><strong>{joinTarget.name}</strong></li>
             <li><span>Вид нард</span><strong>{joinTarget.variant === 'short' ? 'Короткие' : 'Длинные'}</strong></li>
-            <li><span>Ставка</span><strong>{tableCoins(joinTarget)} COINS</strong></li>
-            <li><span>Резерв на балансе</span><strong>{tableCoins(joinTarget)} COINS</strong></li>
+            <li><span>Ставка</span><strong>{tableCoins(joinTarget)} A-COINS</strong></li>
+            <li><span>Резерв на балансе</span><strong>{tableCoins(joinTarget)} A-COINS</strong></li>
           </ul>
           {error && <p className="auth__error" role="alert">{error}</p>}
           <div className="profile__actions">

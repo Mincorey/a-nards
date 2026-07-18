@@ -28,10 +28,14 @@ html, body, #root { height: 100%; margin: 0; }
 html { background-color: #241710; } /* тёмная база: системная панель жестов снизу не белеет */
 body {
   color: var(--text);
-  background:
-    radial-gradient(1200px 600px at 50% -10%, #5a3f25 0%, transparent 60%),
-    linear-gradient(160deg, var(--wood-dark), #241710);
-  background-color: #241710;
+  /* ВАЖНО: у body НЕ должно быть непрозрачного фона. Фон-картинка задаётся
+     через body::before (position:fixed, z-index:-2). По порядку отрисовки CSS
+     собственный фон непозиционированного блока body рисуется ПОВЕРХ потомков с
+     отрицательным z-index — то есть непрозрачный background у body перекрывал
+     lobby-bg.jpg (из-за чего фон «пропал»). Держим body прозрачным; тёмная
+     база — на html выше (чтобы системная панель жестов снизу не белела),
+     резервный цвет под картинкой — background-color у body::before. */
+  background: transparent;
   min-height: 100dvh;
   -webkit-text-size-adjust: 100%;
 }
@@ -1406,6 +1410,64 @@ body::after {
 
 /* П6 — фильтры и бейджи столов */
 .lobby__filters { margin: 0 0 0.9rem; }
+
+/* Умный поиск столов — «стеклянное» поле с иконкой и мгновенной фильтрацией. */
+.lobby__search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin: 0 0 1rem;
+}
+.lobby__search-ic {
+  position: absolute;
+  left: 0.9rem;
+  display: grid;
+  place-items: center;
+  color: var(--wood-light);
+  opacity: 0.8;
+  pointer-events: none;
+}
+.lobby__search-input {
+  width: 100%;
+  padding: 0.7rem 2.6rem 0.7rem 2.7rem;
+  border-radius: 12px;
+  color: var(--text);
+  font-size: 0.95rem;
+  background: rgba(16, 10, 5, 0.5);
+  border: 1px solid rgba(216, 184, 120, 0.28);
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+.lobby__search-input::placeholder { color: var(--cream); opacity: 0.5; }
+.lobby__search-input:hover { border-color: rgba(216, 184, 120, 0.45); }
+.lobby__search-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: rgba(20, 13, 6, 0.62);
+  box-shadow: 0 0 0 3px rgba(184, 134, 47, 0.22);
+}
+/* Прячем нативный «крестик» очистки у type="search" — используем свой. */
+.lobby__search-input::-webkit-search-decoration,
+.lobby__search-input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+.lobby__search-clear {
+  position: absolute;
+  right: 0.6rem;
+  width: 1.6rem;
+  height: 1.6rem;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--cream);
+  background: rgba(255, 255, 255, 0.08);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.lobby__search-clear:hover { background: rgba(216, 184, 120, 0.28); color: var(--text); }
 .table-row__badges { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.35rem; }
 .badge {
   font-size: 0.72rem; padding: 0.15rem 0.5rem; border-radius: 999px;

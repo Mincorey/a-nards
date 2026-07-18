@@ -27,7 +27,7 @@ export async function listOpenTables(): Promise<TableListItem[]> {
   return (data ?? []) as unknown as TableListItem[];
 }
 
-/** Режим стола: обычная игра или игра на внутриигровые монеты (COINS). */
+/** Режим стола: обычная игра или игра на внутриигровые монеты (A-COINS). */
 export type TableMode = 'normal' | 'coins';
 
 export interface CreateTableInput {
@@ -37,7 +37,7 @@ export interface CreateTableInput {
   quick?: boolean;
   /** Режим стола. По умолчанию 'normal'. */
   mode?: TableMode;
-  /** Ставка входа в COINS (только для mode='coins'). */
+  /** Ставка входа в A-COINS (только для mode='coins'). */
   coins?: number;
   /** Пароль приватного стола (только для visibility='private'). */
   password?: string;
@@ -47,7 +47,7 @@ export interface CreateTableInput {
 export function tableMode(t: Pick<GameTable, 'settings'>): TableMode {
   return (t.settings?.mode === 'coins' ? 'coins' : 'normal');
 }
-/** Ставка COINS из settings (0, если не задана). */
+/** Ставка A-COINS из settings (0, если не задана). */
 export function tableCoins(t: Pick<GameTable, 'settings'>): number {
   const c = t.settings?.coins;
   return typeof c === 'number' && c > 0 ? c : 0;
