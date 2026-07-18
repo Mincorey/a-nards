@@ -166,8 +166,8 @@ export default function ContactsPage() {
         )}
 
         <p className="legal__hint cform__admin">
-          Для прямого обращения к администратору сайта пишите в Telegram:{' '}
-          <a className="legal__mail" href="https://t.me/Mincorey" target="_blank" rel="noopener noreferrer">@Mincorey</a>
+          По всем вопросам пишите в наш групповой чат в Telegram:{' '}
+          <a className="legal__mail" href="https://t.me/c/3834711392/76" target="_blank" rel="noopener noreferrer">GAME CENTER ABH</a>
         </p>
       </div>
     </section>
