@@ -8,10 +8,17 @@
  * фоновую музыку тоже приглушаем.
  * Кнопка «ЛОББИ» уводит на главную страницу.
  * ========================================================================== */
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Modal from './Modal';
 import { playVictory } from '../lib/sound';
 import { pauseMusic } from '../lib/music';
+
+/** Пауза перед показом модалки результата. Игрок должен успеть УВИДЕТЬ, как
+ * последняя шашка легла в лоток, а не мгновенный экран результата поверх
+ * незавершённого движения. Заодно пауза разводит по времени модалку и тап,
+ * которым была снята последняя шашка (двойная защита от «сквозного» тапа —
+ * вместе со взводом кликов в Modal.tsx). */
+const APPEAR_DELAY_MS = 900;
 
 export interface GameOverModalProps {
   won: boolean;
@@ -81,11 +88,23 @@ function DefeatCup() {
 export default function GameOverModal({
   won, subtitle, rating, onLobby, onAgain, againLabel = 'Сыграть ещё', extra, onClose,
 }: GameOverModalProps) {
-  // При показе модалки: пауза фоновой музыки всегда; звук победы — только при выигрыше.
+  // Красивое завершение матча: модалка появляется не мгновенно, а после паузы,
+  // и «выплывает» с анимацией (см. .modal__card.gover в index.css).
+  const [shown, setShown] = useState(false);
   useEffect(() => {
+    const t = window.setTimeout(() => setShown(true), APPEAR_DELAY_MS);
+    return () => window.clearTimeout(t);
+  }, []);
+
+  // Звуки — в момент фактического ПОКАЗА: пауза фоновой музыки всегда;
+  // звук победы — только при выигрыше.
+  useEffect(() => {
+    if (!shown) return;
     pauseMusic();
     if (won) playVictory();
-  }, [won]);
+  }, [shown, won]);
+
+  if (!shown) return null;
 
   return (
     <Modal className={'gover ' + (won ? 'gover--win' : 'gover--loss')} onClose={onClose}>

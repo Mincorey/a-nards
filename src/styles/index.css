@@ -690,8 +690,26 @@ body::after {
   color: var(--text); font-size: 1.2rem; line-height: 1; cursor: pointer;
 }
 .modal__close:hover { background: rgba(255, 255, 255, 0.16); }
+/* Появление модалок: фон плавно затемняется, карточка «всплывает» снизу.
+   Модалка завершения партии (.gover) — чуть более торжественный вход с
+   мягким пружинным перелётом. */
+.modal { animation: modal-fade-in 0.24s ease-out; }
+.modal__card { animation: modal-card-in 0.28s cubic-bezier(0.22, 0.85, 0.3, 1.1); }
+@keyframes modal-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes modal-card-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.modal__card.gover { animation: gover-card-in 0.5s cubic-bezier(0.34, 1.35, 0.5, 1); }
+@keyframes gover-card-in {
+  from { opacity: 0; transform: translateY(34px) scale(0.8); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
 @media (prefers-reduced-motion: reduce) {
-  .modal, .modal__card { animation: none; }
+  .modal, .modal__card, .modal__card.gover { animation: none; }
 }
 
 /* Модалка настроек / создания стола — сгруппированные «карточки» вместо голых

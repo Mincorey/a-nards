@@ -17,9 +17,23 @@
  * шапки. Портал в body полностью убирает эту зависимость от места вызова —
  * так модалка всегда корректно центрируется по всему экрану, независимо от
  * того, где именно в дереве её открыли.
+ *
+ * Защита от «сквозного» тапа (ghost click). На мобильных после касания браузер
+ * дорассылает синтетические mouse-события (mousedown/mouseup/click) уже ПОСЛЕ
+ * touchend. Если модалка смонтировалась синхронно в ответ на этот же тап
+ * (пример: тап по лотку выноса снимает ПОСЛЕДНЮЮ шашку → мгновенно открывается
+ * модалка победы), «хвост» того же тапа прилетал в только что открытый оверлей:
+ * mousedown попадал в тёмный фон → onClose → модалка исчезала за долю секунды
+ * (наблюдалось в партии с ботом). Поэтому первые ARM_DELAY_MS после
+ * монтирования оверлей вовсе не принимает указательные события
+ * (pointer-events: none) и дополнительно игнорирует клик по фону. Esc работает
+ * сразу — клавиатуры «хвост» тапа не касается.
  * ========================================================================== */
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+
+/** Первые N мс после открытия модалка «не взведена»: не ловит клики/тапы. */
+const ARM_DELAY_MS = 400;
 
 export interface ModalProps {
   onClose?: () => void;
@@ -28,6 +42,12 @@ export interface ModalProps {
 }
 
 export default function Modal({ onClose, className = '', children }: ModalProps) {
+  const [armed, setArmed] = useState(false);
+  useEffect(() => {
+    const t = window.setTimeout(() => setArmed(true), ARM_DELAY_MS);
+    return () => window.clearTimeout(t);
+  }, []);
+
   useEffect(() => {
     if (!onClose) return;
     function onKey(e: KeyboardEvent) {
@@ -42,8 +62,9 @@ export default function Modal({ onClose, className = '', children }: ModalProps)
       className="modal"
       role="dialog"
       aria-modal="true"
+      style={armed ? undefined : { pointerEvents: 'none' }}
       onMouseDown={(e) => {
-        if (onClose && e.target === e.currentTarget) onClose();
+        if (armed && onClose && e.target === e.currentTarget) onClose();
       }}
     >
       <div className={'modal__card ' + className}>

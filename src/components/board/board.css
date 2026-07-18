@@ -25,18 +25,21 @@
   transition: none;
 }
 
-/* Влёт сбитой фишки на бар. */
+/* Появление новой фишки на баре (после боя) и в лотке выноса — тихое
+   проявление СТРОГО НА МЕСТЕ (только opacity, никакого движения).
+   ВАЖНО (история бага «фантомной шашки»): раньше здесь был scale 0.4→1.
+   Индивидуальное CSS-свойство scale для SVG-элементов масштабируется вокруг
+   начала координат viewBox (верхний-ЛЕВЫЙ угол доски), а не вокруг самой
+   фишки: позиция фишки задана через transform:translate(...), и в композиции
+   translate тоже умножается на scale (M = S · translate). Из-за этого каждая
+   новая фишка на баре/в лотке первые ~0.3с «прилетала» по диагонали из
+   верхне-левой зоны — та самая фантомная шашка с левой стороны доски при
+   выносе в центр и при бое. Никакого scale/translate в этих keyframes быть
+   не должно. */
 .bd-checker--enter { animation: bd-pop 0.28s ease-out; }
 @keyframes bd-pop {
-  from { opacity: 0; scale: 0.4; }
-  to { opacity: 1; scale: 1; }
-}
-
-/* Появление вынесенной фишки в трее. */
-.bd-off--enter { animation: bd-slide-in 0.32s ease-out; transform-box: fill-box; transform-origin: center; }
-@keyframes bd-slide-in {
-  from { opacity: 0; scale: 0.5; }
-  to { opacity: 1; scale: 1; }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 /* Летящая фишка обычного хода — плывёт поверх доски от старой точки к новой. */
@@ -72,8 +75,7 @@
 @media (prefers-reduced-motion: reduce) {
   .bd-target { animation: none; }
   .bd-checker { transition: none; }
-  .bd-checker--enter,
-  .bd-off--enter { animation: none; }
+  .bd-checker--enter { animation: none; }
   .bd-fly { display: none; }
 }
 
