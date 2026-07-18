@@ -1075,6 +1075,61 @@ body::after {
 }
 .gset__label { font-size: 1rem; }
 
+/* Ползунок громкости — «стеклянная» дорожка с золотой заливкой и круглым бегунком. */
+.gset__slider {
+  margin-top: 0.6rem;
+  padding: 0.65rem 0.8rem 0.8rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: opacity 0.2s ease;
+}
+.gset__slider.is-disabled { opacity: 0.45; }
+.gset__slider-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+.gset__slider-val {
+  font-size: 0.85rem; font-weight: 700; color: var(--accent);
+  min-width: 3ch; text-align: right; font-variant-numeric: tabular-nums;
+}
+/* Кроссбраузерная стилизация range: сбрасываем нативный вид и рисуем свой. */
+.gset__range {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 22px; margin: 0; padding: 0;
+  background: transparent; cursor: pointer;
+}
+.gset__range:disabled { cursor: default; }
+/* Дорожка: заполненная часть (золото) + пустая (стекло) через --fill (0..100%). */
+.gset__range::-webkit-slider-runnable-track {
+  height: 6px; border-radius: 999px;
+  background: linear-gradient(to right,
+    var(--accent) 0%, var(--accent) var(--fill, 50%),
+    rgba(255, 255, 255, 0.16) var(--fill, 50%), rgba(255, 255, 255, 0.16) 100%);
+}
+.gset__range::-moz-range-track {
+  height: 6px; border-radius: 999px; background: rgba(255, 255, 255, 0.16);
+}
+.gset__range::-moz-range-progress {
+  height: 6px; border-radius: 999px; background: var(--accent);
+}
+/* Бегунок. */
+.gset__range::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 18px; height: 18px; margin-top: -6px; border-radius: 50%;
+  background: #fff; border: 2px solid var(--accent);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  transition: transform 0.12s ease;
+}
+.gset__range::-moz-range-thumb {
+  width: 18px; height: 18px; border-radius: 50%;
+  background: #fff; border: 2px solid var(--accent);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+}
+.gset__range:not(:disabled):active::-webkit-slider-thumb { transform: scale(1.15); }
+.gset__range:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px rgba(184, 134, 47, 0.35); }
+.gset__range:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 4px rgba(184, 134, 47, 0.35); }
+
 /* Модалка выбора фразы (мобильный ландшафт). */
 .modal__card.chatpick { text-align: left; max-width: 380px; width: 92vw; padding: 1.4rem 1.3rem 1.2rem; }
 .chatpick__list { list-style: none; margin: 0.6rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }

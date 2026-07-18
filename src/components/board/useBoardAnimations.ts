@@ -63,13 +63,6 @@ function parseKey(k: string): { color: Color; loc: Loc } {
   return { color: c as Color, loc: loc === 'bar' || loc === 'off' ? loc : Number(loc) };
 }
 
-/** Индекс пункта в домашней зоне цвета (белые 0..5, чёрные 18..23) — там, откуда
- *  возможен вынос за один кубик. Вынос с пункта ВНЕ дома в дифф-анимации означает
- *  схлопнутую цепочку (аутфилд→дом→вынос за один ход). */
-function isHomeIdx(color: Color, idx: number): boolean {
-  return color === 'w' ? idx >= 0 && idx <= 5 : idx >= 18 && idx <= 23;
-}
-
 function slotPos(
   loc: Loc, color: Color, countAtSlot: number, points: PointGeom[], viewer: Color,
 ): { cx: number; cy: number; r: number } {
@@ -147,13 +140,14 @@ export function useBoardAnimations(
     if (plus.length === 1 && minus.length === 1 && plus[0].color === minus[0].color) {
       const src = minus[0];
       const dst = plus[0];
-      // ВЫНОС «схлопнутой цепочкой»: если шашка выносится (dst='off'), но её
-      // ИСТОЧНИК — НЕ в домашней зоне игрока, значит это цепочка аутфилд→дом→вынос,
-      // применённая за один шаг (dst-дифф схлопнулся в «аутфилд→off»). Прямой
-      // перелёт из аутфилда к центру выглядит как «фантомная фишка, летящая с
-      // противоположной стороны доски». Не анимируем — фишка просто появится в
-      // лотке (bd-off--enter). Обычный вынос из дома анимируется как прежде.
-      if (dst.loc === 'off' && typeof src.loc === 'number' && !isHomeIdx(src.color, src.loc)) { playChecker(); return; }
+      // ВЫНОС (dst='off'): НИКОГДА не анимируем перелёт фишки через доску к
+      // центральному лотку выноса. Любой такой полёт (особенно при выносе
+      // цепочкой аутфилд→дом→вынос или из-за отражения перспективы у чёрных)
+      // визуально читается как «фантомная фишка, движущаяся с ПРОТИВОПОЛОЖНОЙ
+      // стороны доски». По требованию: при выносе на другой половине доски не
+      // должно происходить НИЧЕГО — снятая шашка просто появляется в лотке
+      // (bd-checker--enter: всплытие на месте, без перемещения). Звук оставляем.
+      if (dst.loc === 'off') { playChecker(); return; }
       const from = slotPos(src.loc, src.color, before.get(src.key)!, points, viewer);
       const to = slotPos(dst.loc, dst.color, after.get(dst.key)!, points, viewer);
       const isMine = myColor != null && src.color === myColor;

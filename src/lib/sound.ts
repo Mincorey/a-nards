@@ -2,7 +2,7 @@
 // эффект, чтобы не создавать новый объект на каждый бросок. Все ошибки/блокировки
 // автоплея молча гасим — звук не критичен для игры.
 
-import { isDiceSoundEnabled } from './gameSettings';
+import { isDiceSoundEnabled, getSfxVolume } from './gameSettings';
 
 let diceAudio: HTMLAudioElement | null = null;
 
@@ -20,6 +20,7 @@ export function playDiceRoll(): void {
       diceAudio = new Audio('/sound/throw_of_dice.mp3');
       diceAudio.preload = 'auto';
     }
+    diceAudio.volume = getSfxVolume();
     diceAudio.currentTime = 0;
     void diceAudio.play().catch(() => { /* автоплей до первого жеста / нет звука */ });
   } catch {
@@ -40,6 +41,7 @@ export function playVictory(): void {
       victoryAudio = new Audio('/sound/victory.mp3');
       victoryAudio.preload = 'auto';
     }
+    victoryAudio.volume = getSfxVolume();
     victoryAudio.currentTime = 0;
     void victoryAudio.play().catch(() => { /* автоплей до первого жеста / нет звука */ });
   } catch {
@@ -63,6 +65,7 @@ export function playChecker(): void {
       checkerAudio = new Audio('/sound/checker.mp3');
       checkerAudio.preload = 'auto';
     }
+    checkerAudio.volume = getSfxVolume();
     checkerAudio.currentTime = 0;
     void checkerAudio.play().catch(() => { /* автоплей до первого жеста / нет звука */ });
   } catch {

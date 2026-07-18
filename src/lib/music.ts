@@ -1,13 +1,13 @@
 /* =============================================================================
- * music.ts — Фоновая музыка ТОЛЬКО во время партии. Два трека проигрываются по
- * кругу: music_1.mp3 → music_2.mp3 → music_1.mp3 → …
+ * music.ts — Фоновая музыка ТОЛЬКО во время партии. Треки проигрываются по
+ * кругу: music_1.mp3 → music_2.mp3 → music_3.mp3 → music_4.mp3 → music_1.mp3 → …
  * Проигрывание = (мы на игровом экране) И (тумблер «Фоновая музыка» включён).
  * Единый Audio-элемент; ошибки автоплея молча гасим (звук не критичен). Модуль
  * подписан на стор настроек, поэтому реагирует на тумблер сразу.
  * ========================================================================== */
-import { isBgMusicEnabled, subscribeSettings } from './gameSettings';
+import { isBgMusicEnabled, getMusicVolume, subscribeSettings } from './gameSettings';
 
-const TRACKS = ['/sound/music_1.mp3', '/sound/music_2.mp3'];
+const TRACKS = ['/sound/music_1.mp3', '/sound/music_2.mp3', '/sound/music_3.mp3', '/sound/music_4.mp3'];
 
 let audio: HTMLAudioElement | null = null;
 let trackIdx = 0;
@@ -18,7 +18,7 @@ function ensureAudio(): HTMLAudioElement | null {
   if (audio) return audio;
   audio = new Audio(TRACKS[trackIdx]);
   audio.preload = 'auto';
-  audio.volume = 0.45;
+  audio.volume = getMusicVolume();
   // По окончании трека — следующий по кругу.
   audio.addEventListener('ended', () => {
     if (!audio) return;
@@ -33,11 +33,14 @@ function shouldPlay(): boolean {
   return inGame && isBgMusicEnabled();
 }
 
-/** Пересобрать состояние воспроизведения по текущим флагам. */
+/** Пересобрать состояние воспроизведения по текущим флагам. Также подтягивает
+ *  актуальную громкость — благодаря подписке на стор это делает регулировку
+ *  ползунком «Громкость музыки» мгновенной, даже пока трек уже играет. */
 function sync(): void {
+  if (audio) audio.volume = getMusicVolume();
   if (shouldPlay()) {
     const a = ensureAudio();
-    if (a) void a.play().catch(() => { /* до первого жеста автоплей может блокироваться */ });
+    if (a) { a.volume = getMusicVolume(); void a.play().catch(() => { /* до первого жеста автоплей может блокироваться */ }); }
   } else if (audio) {
     audio.pause();
   }
