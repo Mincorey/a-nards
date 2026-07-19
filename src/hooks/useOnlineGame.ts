@@ -7,6 +7,7 @@ import type { Color, GameState } from '../engine/types';
 import type { GameRow } from '../lib/online.types';
 import { getActiveGame, playMove, passTurn, rollDice, subscribeTable, createGameSync } from '../lib/online';
 import { targetsFrom, legalSources, allowedMoves, chainedTargetsFrom } from '../game/rules';
+import { isNewerGameRow } from '../game/gameOrder';
 import * as E from '../engine/core';
 
 export type Spot = number | 'bar' | 'off';
@@ -45,13 +46,15 @@ export function useOnlineGame(tableId: string, myColor: Color | null): UseOnline
     return () => { mounted.current = false; };
   }, []);
 
-  // Применить пришедшую извне строку партии. Берём только БОЛЕЕ СВЕЖУЮ версию
-  // (по updated_at) — так дубликат из второго канала и любые запоздавшие события
-  // молча отбрасываются, без лишней переанимации.
+  // Применить пришедшую извне строку партии. Берём только ЛОГИЧЕСКИ БОЛЕЕ
+  // НОВУЮ версию (ply → брошены ли кости → расход кубиков → updated_at, см.
+  // game/gameOrder.ts). Так отбрасываются и дубликаты второго канала, и —
+  // главное — ПРОМЕЖУТОЧНЫЕ полуходы нашей же цепочки из Realtime, которые
+  // раньше на миг откатывали оптимистичное состояние и вызывали фантомную
+  // повторную анимацию броска костей (сравнение шло только по updated_at).
   const applyIncoming = useCallback((row: GameRow | null) => {
     if (!row) return;
-    const cur = gameRef.current;
-    if (cur && row.updated_at && cur.updated_at && row.updated_at <= cur.updated_at) return;
+    if (!isNewerGameRow(gameRef.current, row)) return;
     gameRef.current = row;
     setGame(row);
     setSelected(null);

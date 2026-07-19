@@ -5,7 +5,10 @@
    ТОЛЬКО соперник ходящего (тот, кто на месте и ждёт). */
 import { admin, requireUser, json, corsHeaders, HttpError, errToResponse } from '../_shared/util.ts';
 
-const TURN_LIMIT_MS = 90_000; // 90 секунд на ход
+// 90с основного времени + 30с дополнительного (клиент показывает обратный
+// отсчёт и играет timer_bell/countdown_10s). Должно совпадать с TURN_LIMIT_MS
+// в src/game/timeout.ts.
+const TURN_LIMIT_MS = 120_000;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders(req) });

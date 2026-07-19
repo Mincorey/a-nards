@@ -11,6 +11,7 @@ import { IconGear, IconExit } from '../components/icons';
 import { useAuth } from '../lib/auth';
 import { useOnline } from '../lib/presence';
 import { useOnlineGame } from '../hooks/useOnlineGame';
+import { useTurnClock } from '../hooks/useTurnClock';
 import { useRegisterNavGuard, useNavGuardRef } from '../lib/navGuard';
 import { getTable, leaveTable, startGame, subscribeTable, fetchMyRating, createChatChannel, resignGame, claimTimeout, deleteTable, type TableFull } from '../lib/online';
 import { shouldClaimTimeout } from '../game/timeout';
@@ -53,6 +54,8 @@ export default function TablePage() {
   );
   const myColor: Color | null = mySeat ? (mySeat.color as Color) : null;
   const g = useOnlineGame(id, myColor);
+  // Часы хода: доп. время 30с после основного (бейдж + звуки timer_bell/countdown).
+  const clock = useTurnClock(g.game);
 
   const selfName = mySeat?.profile?.display_name ?? 'Вы';
   const selfAvatar = mySeat?.profile?.avatar_url ?? null;
@@ -234,6 +237,15 @@ export default function TablePage() {
 
         <div className="game__board">
           {activeGame && g.message && <div className={'game__status' + (g.phase === 'myMove' || g.phase === 'myRoll' ? ' is-you' : '')}>{g.message}</div>}
+          {activeGame && clock?.inExtra && (
+            <div
+              className={'game__extra' + (clock.extraLeftMs <= 10_000 ? ' is-critical' : '')}
+              role="alert"
+            >
+              {g.game?.turn === myColor ? 'Дополнительное время' : 'Доп. время соперника'}:{' '}
+              <strong>{Math.ceil(clock.extraLeftMs / 1000)} с</strong>
+            </div>
+          )}
           {g.game && g.state ? (
             <Board
               state={g.state}
