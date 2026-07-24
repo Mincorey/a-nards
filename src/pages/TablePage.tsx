@@ -13,7 +13,7 @@ import { useOnline } from '../lib/presence';
 import { useOnlineGame } from '../hooks/useOnlineGame';
 import { useTurnClock } from '../hooks/useTurnClock';
 import { useRegisterNavGuard, useNavGuardRef } from '../lib/navGuard';
-import { getTable, leaveTable, startGame, subscribeTable, fetchMyRating, createChatChannel, resignGame, claimTimeout, deleteTable, type TableFull } from '../lib/online';
+import { getTable, leaveTable, startGame, subscribeTable, fetchMyRating, fetchMyCoins, tableMode, tableCoins, createChatChannel, resignGame, claimTimeout, deleteTable, type TableFull } from '../lib/online';
 import { shouldClaimTimeout } from '../game/timeout';
 import { setInGame } from '../lib/music';
 import { getFriends, createInvite, type MiniProfile } from '../lib/friends';
@@ -90,12 +90,15 @@ export default function TablePage() {
   const ratingBeforeRef = useRef<number | null>(null);
   const capturedGameRef = useRef<string | null>(null);
   const [ratingInfo, setRatingInfo] = useState<{ after: number; delta: number } | null>(null);
+  // Денежный стол: изменение баланса A-COINS за партию (после расчёта эскроу).
+  const [coinsInfo, setCoinsInfo] = useState<{ after: number; delta: number } | null>(null);
   useEffect(() => {
     const gid = g.game && g.game.status === 'playing' ? g.game.id : null;
     if (gid && capturedGameRef.current !== gid) {
       capturedGameRef.current = gid;
       ratingBeforeRef.current = mySeat?.profile?.rating ?? null;
       setRatingInfo(null);
+      setCoinsInfo(null);
     }
   }, [g.game, mySeat]);
 
@@ -133,6 +136,36 @@ export default function TablePage() {
     }).catch(() => { /* рейтинг не критичен для показа модалки */ });
     return () => { alive = false; };
   }, [g.phase, g.game, myColor, ratingInfo]);
+
+  // Денежный стол — после расчёта эскроу показываем изменение баланса A-COINS.
+  // Итог партии детерминирован ставкой: победитель +50% ставки соперника,
+  // проигравший теряет свою ставку (сервер уже применил это в finalize_game).
+  useEffect(() => {
+    if (g.phase !== 'gameover' || !g.game || coinsInfo) return;
+    if (!data || tableMode(data.table) !== 'coins') return;
+    const stake = tableCoins(data.table);
+    if (stake <= 0) return;
+    const won = g.game.winner === myColor;
+    const delta = won ? Math.floor(stake / 2) : -stake;
+    let alive = true;
+    fetchMyCoins().then((after) => {
+      if (!alive || after == null) return;
+      setCoinsInfo({ after, delta });
+    }).catch(() => { /* баланс не критичен для показа модалки */ });
+    return () => { alive = false; };
+  }, [g.phase, g.game, myColor, coinsInfo, data]);
+
+  // После завершения партии обновляем кэшированный профиль (games_played /
+  // games_won / rating / coins). auth.profile грузится один раз при входе и
+  // сам по себе не обновляется — без этого страница профиля показывала бы
+  // устаревшую статистику (напр. «9 игр / 9 побед» вместо 10/10) до перезахода.
+  const refreshedForRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (g.phase !== 'gameover' || !g.game) return;
+    if (refreshedForRef.current === g.game.id) return;
+    refreshedForRef.current = g.game.id;
+    void auth.refreshProfile();
+  }, [g.phase, g.game, auth]);
 
   // Таймаут хода: если сейчас ход СОПЕРНИКА и он не ходит дольше лимита (пропал
   // интернет / свернул игру) — засчитываем ему поражение через сервер (сервер
@@ -337,6 +370,7 @@ export default function TablePage() {
         <GameOverModal
           won={g.game?.winner === myColor}
           rating={ratingInfo}
+          coins={coinsInfo}
           onAgain={() => { void leaveTable(id); nav('/lobby', { state: { create: true } }); }}
           againLabel="Создать стол"
           onLobby={() => nav('/')}

@@ -2,7 +2,7 @@
  * friends.ts — Друзья (заявки/принятые) и приглашения за стол.
  * ========================================================================== */
 import { supabase } from './supabase';
-import { joinTable } from './online';
+import { joinTableSecure } from './online';
 
 export interface MiniProfile {
   id: string;
@@ -133,9 +133,12 @@ export async function getIncomingInvites(): Promise<InviteRow[]> {
   return (data ?? []) as unknown as InviteRow[];
 }
 
-/** Принять приглашение: сесть за стол и пометить инвайт. */
+/** Принять приглашение: сесть за стол и пометить инвайт. Идёт через серверную
+ * RPC (sit_at_table): приглашённый гость приватного стола садится без пароля, а
+ * для денежного стола атомарно замораживается ставка A-COINS (проверка средств).
+ */
 export async function acceptInvite(inv: InviteRow): Promise<string> {
-  await joinTable(inv.table_id);
+  await joinTableSecure(inv.table_id);
   await supabase.from('invites').update({ status: 'accepted' }).eq('id', inv.id);
   return inv.table_id;
 }

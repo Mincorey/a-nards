@@ -26,6 +26,8 @@ export interface GameOverModalProps {
   subtitle?: string;
   /** Онлайн: изменение рейтинга (после партии). Для игры с ботом — null/undefined. */
   rating?: { after: number; delta: number } | null;
+  /** Денежный стол: изменение баланса A-COINS за партию (например +50 / −100). */
+  coins?: { after: number; delta: number } | null;
   onLobby: () => void;
   onAgain?: () => void;
   againLabel?: string;
@@ -86,7 +88,7 @@ function DefeatCup() {
 }
 
 export default function GameOverModal({
-  won, subtitle, rating, onLobby, onAgain, againLabel = 'Сыграть ещё', extra, onClose,
+  won, subtitle, rating, coins, onLobby, onAgain, againLabel = 'Сыграть ещё', extra, onClose,
 }: GameOverModalProps) {
   // Красивое завершение матча: модалка появляется не мгновенно, а после паузы,
   // и «выплывает» с анимацией (см. .modal__card.gover в index.css).
@@ -119,6 +121,18 @@ export default function GameOverModal({
             {rating.after}
             <span className={'gover__rating-delta' + (rating.delta < 0 ? ' is-neg' : '')}>
               {rating.delta >= 0 ? `+${rating.delta}` : rating.delta}
+            </span>
+          </span>
+        </div>
+      )}
+
+      {coins && (
+        <div className="gover__coins">
+          <span className="gover__coins-label">A-COINS</span>
+          <span className="gover__coins-val">
+            {coins.after.toLocaleString('ru-RU')}
+            <span className={'gover__coins-delta' + (coins.delta < 0 ? ' is-neg' : '')}>
+              {coins.delta >= 0 ? `+${coins.delta}` : coins.delta}
             </span>
           </span>
         </div>

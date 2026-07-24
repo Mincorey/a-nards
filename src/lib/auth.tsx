@@ -22,6 +22,8 @@ export interface Profile {
   rating: number;
   games_played: number;
   games_won: number;
+  /** Баланс внутриигровой валюты A-COINS. */
+  coins: number;
   created_at: string;
   updated_at: string;
 }

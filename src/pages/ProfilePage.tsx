@@ -159,6 +159,10 @@ export default function ProfilePage() {
             <span className="wallet__label">Баланс кошелька</span>
             <span className="wallet__amount">{formatRub(WALLET_BALANCE_RUB)}</span>
           </div>
+          <div className="wallet__top wallet__top--coins">
+            <span className="wallet__label">Игровой баланс A-COINS</span>
+            <span className="wallet__amount">{(p?.coins ?? 0).toLocaleString('ru-RU')}</span>
+          </div>
           <div className="wallet__actions">
             <button className="btn btn--primary" onClick={() => setWalletNote('Пополнение баланса скоро будет доступно — платёжная система в разработке.')}>
               Пополнить баланс

@@ -18,6 +18,16 @@ Deno.serve(async (req) => {
     const isMember = table.owner_id === user.id || seats.some((s) => s.user_id === user.id);
     if (!isMember) throw new HttpError(403, 'Вы не за этим столом');
 
+    // Денежный стол: перед стартом убеждаемся, что ОБА игрока внесли ставку
+    // (эскроу заморожен при посадке). Защита от старта неоплаченной партии.
+    const settings = (table.settings ?? {}) as { mode?: string; coins?: number };
+    if (settings.mode === 'coins') {
+      const stake = typeof settings.coins === 'number' ? Math.floor(settings.coins) : 0;
+      if (stake > 0 && !seats.every((s) => (s.coins_locked ?? 0) >= stake)) {
+        throw new HttpError(409, 'Не у всех игроков заморожена ставка — стол не может начаться');
+      }
+    }
+
     // Уже идёт партия — вернём её.
     const { data: existing } = await db.from('games')
       .select('*').eq('table_id', table_id).eq('status', 'playing').maybeSingle();

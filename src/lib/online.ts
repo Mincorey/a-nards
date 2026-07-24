@@ -88,11 +88,26 @@ export async function createTable(input: CreateTableInput): Promise<GameTable> {
     }
   }
 
-  const { error: seatErr } = await supabase.from('table_seats')
-    .insert({ table_id: table.id, user_id: uid, seat: 0, color: 'w', is_ready: true });
-  if (seatErr) throw seatErr;
+  // Посадка владельца — через серверную RPC sit_at_table: она атомарно сажает и
+  // (для денежного стола) ЗАМОРАЖИВАЕТ ставку на балансе A-COINS владельца.
+  // Если денег на ставку не хватает — стол только что создан и бесполезен, откат.
+  const { error: seatErr } = await supabase.rpc('sit_at_table', { p_table: table.id, p_password: null });
+  if (seatErr) {
+    await supabase.from('game_tables').delete().eq('id', table.id);
+    throw mapSitError(seatErr);
+  }
 
   return table as GameTable;
+}
+
+/** Понятные сообщения об ошибках посадки за стол (RPC sit_at_table). */
+function mapSitError(error: { message?: string }): Error {
+  const m = error.message || '';
+  if (/insufficient coins/i.test(m)) return new Error('Недостаточно A-COINS для этой ставки');
+  if (/password/i.test(m)) return new Error('Неверный пароль');
+  if (/full|занят/i.test(m)) return new Error('Стол занят');
+  if (/not available/i.test(m)) return new Error('Стол уже недоступен');
+  return new Error(m || 'Не удалось сесть за стол');
 }
 
 /**
@@ -167,12 +182,7 @@ export async function joinTableSecure(id: string, password?: string): Promise<vo
     p_table: id,
     p_password: password ?? null,
   });
-  if (error) {
-    const m = error.message || '';
-    if (/password/i.test(m)) throw new Error('Неверный пароль');
-    if (/full|occupied|занят/i.test(m)) throw new Error('Стол занят');
-    throw new Error(m || 'Не удалось присоединиться');
-  }
+  if (error) throw mapSitError(error); // в т.ч. «Недостаточно A-COINS для этой ставки»
 }
 
 export async function leaveTable(id: string): Promise<void> {
@@ -229,6 +239,15 @@ export async function fetchMyRating(): Promise<number | null> {
   if (!uid) return null;
   const { data } = await supabase.from('profiles').select('rating').eq('id', uid).maybeSingle();
   return (data?.rating as number | undefined) ?? null;
+}
+
+/** Текущий баланс A-COINS авторизованного игрока (для показа изменения после партии). */
+export async function fetchMyCoins(): Promise<number | null> {
+  const { data: u } = await supabase.auth.getUser();
+  const uid = u.user?.id;
+  if (!uid) return null;
+  const { data } = await supabase.from('profiles').select('coins').eq('id', uid).maybeSingle();
+  return (data?.coins as number | undefined) ?? null;
 }
 
 export async function getActiveGame(tableId: string): Promise<GameRow | null> {

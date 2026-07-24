@@ -1384,6 +1384,19 @@ body::after {
 .gover__rating-label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.7; }
 .gover__rating-val { font-size: 1.7rem; font-weight: 800; color: var(--cream); display: flex; align-items: baseline; gap: 0.4rem; }
 .gover__rating-delta { font-size: 1rem; font-weight: 700; color: #7fd18a; }
+/* Денежный результат A-COINS — рамка под золото, чуть компактнее рейтинга. */
+.gover__coins {
+  display: flex; flex-direction: column; align-items: center; gap: 0.15rem;
+  margin: -0.4rem auto 1.1rem; padding: 0.55rem 1.1rem;
+  background: rgba(226, 176, 74, 0.14); border: 1px solid rgba(226, 176, 74, 0.4);
+  border-radius: 12px; width: fit-content;
+}
+.gover__coins-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.7; }
+.gover__coins-val { font-size: 1.35rem; font-weight: 800; color: var(--cream); display: flex; align-items: baseline; gap: 0.4rem; }
+.gover__coins-delta { font-size: 0.95rem; font-weight: 700; color: #7fd18a; }
+.gover__coins-delta.is-neg { color: #e79a9a; }
+.gover--loss .gover__coins { background: rgba(120, 132, 148, 0.12); border-color: rgba(150, 162, 178, 0.35); }
+
 .gover__actions { display: flex; gap: 0.6rem; justify-content: center; flex-wrap: wrap; }
 .gover__actions .btn { min-width: 120px; }
 
@@ -1638,6 +1651,7 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
   border: 1px solid rgba(216, 184, 120, 0.3);
 }
 .wallet__top { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.wallet__top--coins { margin-top: 0.6rem; padding-top: 0.6rem; border-top: 1px solid rgba(184, 134, 47, 0.25); }
 .wallet__label { font-size: 0.85rem; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.05em; }
 .wallet__amount { font-size: 1.5rem; font-weight: 800; color: var(--accent); }
 .wallet__actions { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-top: 0.8rem; }
