@@ -29,8 +29,10 @@ export interface Flight {
   to: { cx: number; cy: number };
   destLoc: Loc;
   phase: 'start' | 'go';
-  /** Сбитая фишка соперника, одновременно улетающая на бар (только при бое). */
-  victim?: { color: Color; r: number; from: { cx: number; cy: number }; to: { cx: number; cy: number } };
+  /** Сбитая фишка соперника, одновременно улетающая на бар (только при бое).
+   *  duration — СВОЯ (обычно более медленная) длительность полёта на центр (бар),
+   *  чтобы путь «сброса на центр стола» нормально прослеживался. */
+  victim?: { color: Color; r: number; duration: number; from: { cx: number; cy: number }; to: { cx: number; cy: number } };
 }
 
 /* Анти-фантом: окно защиты от повторной анимации одного и того же перемещения
@@ -156,7 +158,7 @@ export function useBoardAnimations(
         id: flightIdRef.current,
         color: src.color,
         r: to.r,
-        duration: isMine ? 260 : 1400, // чужой ход — медленнее, чтобы было видно, куда пошла фишка
+        duration: isMine ? 180 : 1400, // свой ход — быстрее (проще сразу брать следующую фишку); чужой — медленнее, чтобы было видно, куда пошла фишка
         from: { cx: from.cx, cy: from.cy },
         to: { cx: to.cx, cy: to.cy },
         destLoc: dst.loc,
@@ -197,6 +199,10 @@ export function useBoardAnimations(
         victim: {
           color: victimColor,
           r: vFrom.r,
+          // «Сброс на центр стола»: сбитую фишку ведём на бар заметно медленнее,
+          // чтобы её путь к центру нормально прослеживался (даже когда бью я и
+          // моя атакующая фишка приходит быстрее).
+          duration: isMine ? 1200 : 1500,
           from: { cx: vFrom.cx, cy: vFrom.cy },
           to: { cx: vTo.cx, cy: vTo.cy },
         },
@@ -222,10 +228,14 @@ export function useBoardAnimations(
   useEffect(() => {
     if (!flight || flight.phase !== 'go') return;
     const id = flight.id;
+    // Ждём завершения САМОГО долгого из двух полётов (атакующая фишка и/или
+    // более медленная сбитая фишка, летящая на центр), иначе оверлей уберётся
+    // раньше времени и фишка «прыгнет» на место.
+    const totalMs = Math.max(flight.duration, flight.victim?.duration ?? 0);
     const t = window.setTimeout(() => {
       playChecker(); // «стук» фишки о доску в момент приземления
       setFlight((f) => (f && f.id === id ? null : f));
-    }, flight.duration + 60);
+    }, totalMs + 60);
     return () => window.clearTimeout(t);
   }, [flight]);
 

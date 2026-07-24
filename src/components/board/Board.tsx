@@ -284,7 +284,7 @@ export default function Board({
             className="bd-checker bd-fly"
             style={{
               transform: `translate(${(flight.phase === 'go' ? flight.victim.to.cx : flight.victim.from.cx) - flight.victim.r}px, ${(flight.phase === 'go' ? flight.victim.to.cy : flight.victim.from.cy) - flight.victim.r}px)`,
-              transition: flight.phase === 'go' ? `transform ${flight.duration}ms cubic-bezier(0.3, 0.1, 0.2, 1)` : 'none',
+              transition: flight.phase === 'go' ? `transform ${flight.victim.duration}ms cubic-bezier(0.3, 0.1, 0.2, 1)` : 'none',
             }} />
         )}
 
@@ -332,8 +332,11 @@ export default function Board({
       {/* Кнопка «Бросить» по центру доски — когда мой ход до броска.
           Пока кости УЖЕ на столе (state.rolled) — кнопку не показываем, иначе
           золотая плашка перекрывает выпавшие кости (например, при пасе с бара,
-          когда фаза остаётся «до броска» ещё пару секунд, а кости уже видны). */}
-      {canRoll && onRoll && !state.rolled && (
+          когда фаза остаётся «до броска» ещё пару секунд, а кости уже видны).
+          Пока летит фишка (flight) — тоже НЕ показываем: кнопка не должна
+          появляться раньше, чем завершится анимация перемещения шашек
+          соперника (иначе по ней несколько раз тыкают вхолостую). */}
+      {canRoll && onRoll && !state.rolled && !flight && (
         <button
           type="button"
           className="bd-roll"
